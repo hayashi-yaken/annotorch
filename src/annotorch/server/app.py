@@ -12,7 +12,7 @@ from ..services.exports import ExportService
 from ..services.projects import ProjectService
 from ..services.tasks import TaskService
 from ..storage.workspace import Workspace
-from .routers import items, projects
+from .routers import items, projects, tasks
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -50,6 +50,7 @@ def create_app(root: Path | str) -> FastAPI:
 
     app.include_router(projects.router, prefix="/api")
     app.include_router(items.router, prefix="/api")
+    app.include_router(tasks.router, prefix="/api")
 
     if STATIC_DIR.is_dir():
         app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

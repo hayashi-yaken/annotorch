@@ -1,4 +1,5 @@
-import { api, Item } from "../api";
+import { api } from "../api";
+import type { Item } from "../api";
 
 export default function ItemView({ projectId, item, size }: {
   projectId: string; item: Item; size?: "large";

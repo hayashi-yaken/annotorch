@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { api, Project } from "../api";
+import { api } from "../api";
+import type { Project } from "../api";
 
 export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void }) {
   const [projects, setProjects] = useState<Project[]>([]);

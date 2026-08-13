@@ -17,7 +17,14 @@ class Workspace:
         self.root = Path(root)
 
     def _project_dir(self, project_id: str) -> Path:
-        return self.root / "projects" / project_id
+        # project_id は URL パス segment 由来で信頼できない。".." などで
+        # projects/ の外に出ようとした場合は 404 相当の LookupError にする
+        # (任意ディレクトリ削除などのパストラバーサル対策)。
+        base = (self.root / "projects").resolve()
+        d = (base / project_id).resolve()
+        if d.parent != base:
+            raise LookupError(f"no project {project_id}")
+        return d
 
     def create_project(self, name: str, description: str = "") -> Project:
         project = Project(name=name, description=description)

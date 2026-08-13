@@ -20,7 +20,7 @@ export default function AnnotatePage({ project, task, onBack }: {
       setUnits(us);
       const firstUnanswered = us.findIndex((u) => u.answer === null);
       setIndex(firstUnanswered === -1 ? 0 : firstUnanswered);
-    });
+    }).catch((e) => setError(String(e)));
   }, [project.id, task.id]);
 
   const save = useCallback(async (answer: Answer) => {
@@ -34,7 +34,20 @@ export default function AnnotatePage({ project, task, onBack }: {
     } catch (e) { setError(String(e)); }
   }, [units, index, project.id, task.id]);
 
-  if (!units) return <div className="container">読み込み中…</div>;
+  if (!units) {
+    return (
+      <div className="container">
+        {error ? (
+          <>
+            <button onClick={onBack}>← 戻る</button>
+            <p className="error">{error}</p>
+          </>
+        ) : (
+          "読み込み中…"
+        )}
+      </div>
+    );
+  }
   if (units.length === 0) {
     return (
       <div className="container">

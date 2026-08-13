@@ -14,10 +14,11 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
   const [items, setItems] = useState<Item[]>([]);
   const [tasks, setTasks] = useState<TaskWithProgress[]>([]);
   const [exportTask, setExportTask] = useState<Task | null>(null);
+  const [error, setError] = useState("");
 
   const refresh = useCallback(() => {
-    api.listItems(project.id).then(setItems);
-    api.listTasks(project.id).then(setTasks);
+    api.listItems(project.id).then(setItems).catch((e) => setError(String(e)));
+    api.listTasks(project.id).then(setTasks).catch((e) => setError(String(e)));
   }, [project.id]);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -27,6 +28,7 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
         <button onClick={onBack}>← プロジェクト一覧</button>
         <h1>{project.name}</h1>
       </div>
+      {error && <p className="error">{error}</p>}
 
       <h2>アイテム（{items.length}件）</h2>
       <ImportPanel projectId={project.id} onImported={refresh} />

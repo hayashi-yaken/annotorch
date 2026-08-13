@@ -6,9 +6,14 @@ import type { EditorProps } from "./types";
 const COLORS = ["#4a7", "#47a", "#a47", "#a74", "#7a4", "#74a"];
 
 export default function Grouping({ projectId, unit, onSave }: EditorProps) {
-  const [numGroups, setNumGroups] = useState(2);
+  const savedGroups = unit.answer?.groups as string[][] | undefined;
+  const [numGroups, setNumGroups] = useState(Math.max(savedGroups?.length ?? 0, 2));
   const [active, setActive] = useState(0);
-  const [assignment, setAssignment] = useState<Record<string, number>>({});
+  const [assignment, setAssignment] = useState<Record<string, number>>(() => {
+    const init: Record<string, number> = {};
+    savedGroups?.forEach((ids, g) => ids.forEach((id) => { init[id] = g; }));
+    return init;
+  });
   const answer = groupsToAnswer(unit.items.map((i) => i.id), assignment);
 
   return (

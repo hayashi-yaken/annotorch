@@ -41,7 +41,11 @@ class Workspace:
             return []
         out: list[Project] = []
         for db in sorted(projects_dir.glob("*/project.db")):
-            store = SqliteStore(db)
+            try:
+                store = SqliteStore(db)
+            except (LookupError, RuntimeError):
+                # schema_version 不一致など、開けない project.db は listing から除外する。
+                continue
             try:
                 out.append(store.get_project())
             except LookupError:

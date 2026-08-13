@@ -71,3 +71,27 @@ def test_create_project_cleans_up_dir_on_failure(tmp_path, monkeypatch):
         ws.create_project("demo")
 
     assert list((tmp_path / "projects").glob("*")) == []
+
+
+def test_list_projects_skips_schema_mismatched_db(tmp_path):
+    """schema_version が不一致な project.db (SqliteStore.__init__ が RuntimeError)
+    も、健全なプロジェクトの listing を壊さない。"""
+    import sqlite3
+
+    ws = Workspace(tmp_path)
+    healthy = ws.create_project("healthy")
+
+    bad_dir = tmp_path / "projects" / "bad-schema-id"
+    bad_dir.mkdir(parents=True)
+    conn = sqlite3.connect(bad_dir / "project.db")
+    conn.execute(
+        "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+    )
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES ('schema_version', '999')"
+    )
+    conn.commit()
+    conn.close()
+
+    projects = ws.list_projects()
+    assert [p.id for p in projects] == [healthy.id]

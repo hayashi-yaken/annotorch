@@ -163,6 +163,33 @@ def test_roundtrip_hard_label_text(tmp_path):
     assert label == 0
 
 
+def test_roundtrip_non_ascii_text_and_label(tmp_path):
+    """日本語テキストとラベルが export/load を通じて破損しない (utf-8 明示のリグレッション)。"""
+    ws = Workspace(tmp_path / "root")
+    projects, tasks, exports = ProjectService(ws), TaskService(ws), ExportService(ws)
+    project = projects.create("rt-ja")
+    jsonl = tmp_path / "texts.jsonl"
+    jsonl.write_text(
+        json.dumps({"text": "これは猫です"}, ensure_ascii=False), encoding="utf-8"
+    )
+    assert projects.import_texts_jsonl(project.id, jsonl).imported == 1
+
+    task, _ = tasks.create_task(project.id, "topic", Presentation.SINGLE,
+                                QuestionType.HARD_LABEL,
+                                TaskConfig(labels=["猫", "犬"]))
+    for unit in tasks.list_units(project.id, task.id):
+        tasks.save_answer(project.id, task.id, unit.id, {"label": "猫"})
+    exports.export(project.id, task.id, tmp_path / "ds-ja")
+
+    manifest = json.loads((tmp_path / "ds-ja" / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["classes"] == ["猫", "犬"]
+
+    ds = load(tmp_path / "ds-ja")
+    obj, label = ds[0]
+    assert obj == "これは猫です"
+    assert label == 0
+
+
 def test_roundtrip_with_splits(env):
     project, services, tmp_path = env
     _, tasks, exports = services

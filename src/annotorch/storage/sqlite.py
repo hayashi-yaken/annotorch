@@ -84,6 +84,14 @@ class SqliteStore:
                 "INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)",
                 (SCHEMA_VERSION,),
             )
+        row = self.conn.execute(
+            "SELECT value FROM meta WHERE key = 'schema_version'"
+        ).fetchone()
+        if row is not None and row["value"] != SCHEMA_VERSION:
+            self.conn.close()
+            raise RuntimeError(
+                f"unsupported schema_version {row['value']} (expected {SCHEMA_VERSION})"
+            )
 
     def close(self) -> None:
         self.conn.close()

@@ -99,3 +99,17 @@ def test_import_texts_csv_missing_column(svc, tmp_path):
     assert report.imported == 0
     assert len(report.skipped) == 1
     assert "text" in report.skipped[0].reason
+
+
+def test_import_texts_csv_short_row_skipped(svc, tmp_path):
+    """text列がヘッダ末尾にあると、列数が足りない行は DictReader の restval で
+    text=None になる (欠損とみなして安全にスキップする)。"""
+    project = svc.create("demo")
+    p = tmp_path / "short.csv"
+    p.write_text("topic,text\ngreeting,hello\nonlytopic\nplace,world\n")
+    report = svc.import_texts_csv(project.id, p)
+    assert report.imported == 2
+    assert len(report.skipped) == 1
+    assert "text" in report.skipped[0].reason
+    items = svc.list_items(project.id)
+    assert [i.text for i in items] == ["hello", "world"]

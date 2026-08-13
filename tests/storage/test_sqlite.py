@@ -115,3 +115,13 @@ def test_default_annotator_is_stable(db_path):
     a1 = st.get_default_annotator()
     a2 = st.get_default_annotator()
     assert a1.id == a2.id == "default"
+
+
+def test_open_rejects_mismatched_schema_version(db_path):
+    st = SqliteStore(db_path)
+    st.conn.execute("UPDATE meta SET value = '999' WHERE key = 'schema_version'")
+    st.conn.commit()
+    st.close()
+
+    with pytest.raises(RuntimeError, match="schema_version"):
+        SqliteStore(db_path)

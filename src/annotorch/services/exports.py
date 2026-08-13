@@ -34,6 +34,11 @@ class ExportService:
         if splits is not None:
             if not splits:
                 raise ValueError("splits must not be empty")
+            for name, fraction in splits.items():
+                if not (0 < fraction <= 1):
+                    raise ValueError(
+                        f"split fraction for {name!r} must be in (0, 1] (got {fraction})"
+                    )
             total = sum(splits.values())
             if abs(total - 1.0) > 1e-3:
                 raise ValueError(f"split fractions must sum to 1 (got {total})")
@@ -101,7 +106,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
         (tmp / "items").mkdir(parents=True)
 
         modalities = set()
-        with open(tmp / "items.jsonl", "w") as f:
+        with open(tmp / "items.jsonl", "w", encoding="utf-8") as f:
             for item_id in referenced_item_ids:
                 item = all_items[item_id]
                 modalities.add(item.modality.value)
@@ -118,7 +123,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
         split_counts: dict[str, int] = {}
-        with open(tmp / "annotations.jsonl", "w") as f:
+        with open(tmp / "annotations.jsonl", "w", encoding="utf-8") as f:
             for a in rows_source:
                 split = split_of[a.unit_id]
                 split_counts[split] = split_counts.get(split, 0) + 1
@@ -151,7 +156,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
             "splits": split_counts,
         }
         (tmp / "manifest.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2)
+            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         tmp.rename(output_dir)

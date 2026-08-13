@@ -83,7 +83,9 @@ class ProjectService:
     def import_texts_jsonl(self, project_id: str, jsonl_path: Path) -> ImportReport:
         report = ImportReport()
         items: list[Item] = []
-        for n, line in enumerate(Path(jsonl_path).read_text().splitlines(), start=1):
+        for n, line in enumerate(
+            Path(jsonl_path).read_text(encoding="utf-8").splitlines(), start=1
+        ):
             if not line.strip():
                 continue
             source = f"{jsonl_path}:{n}"
@@ -110,7 +112,7 @@ class ProjectService:
 
     def import_texts_csv(self, project_id: str, csv_path: Path) -> ImportReport:
         report = ImportReport()
-        with open(csv_path, newline="") as f:
+        with open(csv_path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             if reader.fieldnames is None or "text" not in reader.fieldnames:
                 report.skipped.append(
@@ -118,8 +120,14 @@ class ProjectService:
                 )
                 return report
             items = []
-            for row in reader:
+            for n, row in enumerate(reader, start=1):
                 text = row.pop("text")
+                if not isinstance(text, str):
+                    report.skipped.append(
+                        SkippedFile(source=f"{csv_path}:{n}",
+                                    reason="missing string 'text' field")
+                    )
+                    continue
                 items.append(Item(project_id=project_id, modality=Modality.TEXT,
                                   text=text, metadata=row))
         if items:

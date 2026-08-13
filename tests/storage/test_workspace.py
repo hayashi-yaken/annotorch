@@ -1,5 +1,6 @@
 import pytest
 
+from annotorch.storage.sqlite import SqliteStore
 from annotorch.storage.workspace import Workspace
 
 
@@ -43,3 +44,30 @@ def test_delete_project(tmp_path):
     assert ws.list_projects() == []
     with pytest.raises(LookupError):
         ws.delete_project(p.id)
+
+
+def test_list_projects_skips_projectless_db(tmp_path):
+    """半端に作られた project.db (プロジェクト行なし) が listing 全体を壊さない。"""
+    ws = Workspace(tmp_path)
+    healthy = ws.create_project("healthy")
+
+    broken_dir = tmp_path / "projects" / "broken-id"
+    broken_dir.mkdir(parents=True)
+    store = SqliteStore(broken_dir / "project.db")
+    store.close()
+
+    projects = ws.list_projects()
+    assert [p.id for p in projects] == [healthy.id]
+
+
+def test_create_project_cleans_up_dir_on_failure(tmp_path, monkeypatch):
+    ws = Workspace(tmp_path)
+
+    def boom(self, p):
+        raise RuntimeError("simulated failure")
+
+    monkeypatch.setattr(SqliteStore, "add_project", boom)
+    with pytest.raises(RuntimeError):
+        ws.create_project("demo")
+
+    assert list((tmp_path / "projects").glob("*")) == []

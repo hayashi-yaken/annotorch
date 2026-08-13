@@ -100,3 +100,11 @@ def test_invalid_splits_rejected(env):
     with pytest.raises(ValueError):
         exports.export(project.id, task.id, tmp_path / "x",
                        splits={"train": 0.5, "test": 0.2})
+
+
+def test_negative_split_fraction_rejected(env):
+    """合計が1になっても、個々の分割が(0, 1]の範囲外なら拒否する。"""
+    project, task, exports, tmp_path = env
+    with pytest.raises(ValueError):
+        exports.export(project.id, task.id, tmp_path / "x",
+                       splits={"train": 1.5, "test": -0.5})

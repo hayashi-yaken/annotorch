@@ -21,12 +21,18 @@ class Workspace:
 
     def create_project(self, name: str, description: str = "") -> Project:
         project = Project(name=name, description=description)
-        store = SqliteStore(self._project_dir(project.id) / "project.db")
+        project_dir = self._project_dir(project.id)
         try:
-            store.add_project(project)
-        finally:
-            store.close()
-        self.items_dir(project.id)
+            store = SqliteStore(project_dir / "project.db")
+            try:
+                store.add_project(project)
+            finally:
+                store.close()
+            self.items_dir(project.id)
+        except BaseException:
+            if project_dir.is_dir():
+                shutil.rmtree(project_dir)
+            raise
         return project
 
     def list_projects(self) -> list[Project]:
@@ -38,6 +44,8 @@ class Workspace:
             store = SqliteStore(db)
             try:
                 out.append(store.get_project())
+            except LookupError:
+                continue
             finally:
                 store.close()
         return out

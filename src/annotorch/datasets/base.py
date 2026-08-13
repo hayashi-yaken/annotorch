@@ -12,7 +12,7 @@ def read_manifest(root: Path | str) -> dict:
     manifest_path = Path(root) / "manifest.json"
     if not manifest_path.exists():
         raise FileNotFoundError(f"not an annotorch dataset (no manifest.json): {root}")
-    return json.loads(manifest_path.read_text())
+    return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
 class AnnotorchDataset(Dataset):
@@ -30,12 +30,12 @@ class AnnotorchDataset(Dataset):
         self.split = split
         self.transform = transform
         self._items: dict[str, dict] = {}
-        for line in (self.root / "items.jsonl").read_text().splitlines():
+        for line in (self.root / "items.jsonl").read_text(encoding="utf-8").splitlines():
             record = json.loads(line)
             self._items[record["id"]] = record
         self.rows: list[dict] = [
             row
-            for line in (self.root / "annotations.jsonl").read_text().splitlines()
+            for line in (self.root / "annotations.jsonl").read_text(encoding="utf-8").splitlines()
             if (row := json.loads(line))["split"] == split
         ]
 

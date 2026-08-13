@@ -15,3 +15,17 @@ def test_delete_project(client):
 
 def test_delete_unknown_project_404(client):
     assert client.delete("/api/projects/nope").status_code == 404
+
+
+def test_delete_project_traversal_rejected(client):
+    """project_id='..' percent-encoded as '%2E%2E' bypasses the httpx client's
+    own path normalization, so the raw '..' segment reaches the ASGI app and
+    is routed to delete_project(pid='..'). Without the workspace-boundary
+    guard this hits shutil.rmtree on the workspace root; it must 404 instead."""
+    pid = client.post("/api/projects", json={"name": "x"}).json()["id"]
+
+    res = client.delete("/api/projects/%2E%2E")
+    assert res.status_code == 404
+
+    listed = client.get("/api/projects").json()
+    assert [p["id"] for p in listed] == [pid]

@@ -73,6 +73,35 @@ def test_create_project_cleans_up_dir_on_failure(tmp_path, monkeypatch):
     assert list((tmp_path / "projects").glob("*")) == []
 
 
+def test_delete_project_rejects_traversal(tmp_path):
+    """project_id に '..' を渡しても projects/ の外へは出られない
+    (パストラバーサルによる任意ディレクトリ削除を防ぐ)。"""
+    ws = Workspace(tmp_path)
+    healthy = ws.create_project("healthy")
+    sentinel = tmp_path / "sentinel.txt"
+    sentinel.write_text("do not delete me")
+
+    with pytest.raises(LookupError):
+        ws.delete_project("..")
+    with pytest.raises(LookupError):
+        ws.delete_project("../..")
+
+    assert sentinel.exists()
+    assert (tmp_path / "projects" / healthy.id / "project.db").exists()
+    assert [p.id for p in ws.list_projects()] == [healthy.id]
+
+
+def test_storage_and_items_dir_reject_traversal(tmp_path):
+    """delete 以外の pid 経由 API (storage, items_dir) も同様にガードされる。"""
+    ws = Workspace(tmp_path)
+    ws.create_project("healthy")
+
+    with pytest.raises(LookupError):
+        ws.storage("..")
+    with pytest.raises(LookupError):
+        ws.items_dir("../..")
+
+
 def test_list_projects_skips_schema_mismatched_db(tmp_path):
     """schema_version が不一致な project.db (SqliteStore.__init__ が RuntimeError)
     も、健全なプロジェクトの listing を壊さない。"""

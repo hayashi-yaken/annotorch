@@ -21,6 +21,10 @@ def load(root: Path | str, split: str = "train",
         from .pair import PreferenceDataset as cls
     elif question == "similarity":
         from .pair import SimilarityDataset as cls
+    elif question == "ranking":
+        from .group import RankingDataset as cls
+    elif question == "grouping":
+        from .group import GroupingDataset as cls
     else:
         raise ValueError(f"unsupported question type: {question}")
     return cls(root, split=split, transform=transform)

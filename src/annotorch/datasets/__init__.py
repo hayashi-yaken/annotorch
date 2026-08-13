@@ -17,6 +17,10 @@ def load(root: Path | str, split: str = "train",
         from .classification import HardLabelDataset as cls
     elif question == "soft_label":
         from .classification import SoftLabelDataset as cls
+    elif question == "preference":
+        from .pair import PreferenceDataset as cls
+    elif question == "similarity":
+        from .pair import SimilarityDataset as cls
     else:
         raise ValueError(f"unsupported question type: {question}")
     return cls(root, split=split, transform=transform)

@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card, FileUpload, HStack, Input, Stack, Text, useFileUpload } from "@chakra-ui/react";
-import type { FileUpload as FileUploadNS } from "@chakra-ui/react";
 import { api } from "../api";
 import type { ImportReport } from "../api";
 
@@ -19,39 +18,41 @@ export default function ImportPanel({ projectId, onImported }: {
     } catch (e) { setError(String(e)); }
   };
 
-  // FileUpload validates against `accept` client-side and splits the drop into
-  // acceptedFiles/rejectedFiles; we forward both to the server so it keeps
-  // deciding what's importable and reports skips with a reason (unchanged
-  // behavior from the previous plain <input>-based version).
-  const filesFrom = (details: FileUploadNS.FileChangeDetails) => [
-    ...details.acceptedFiles,
-    ...details.rejectedFiles.map((r) => r.file),
-  ];
-
   // Uses the external-store form (useFileUpload + RootProvider) instead of
-  // FileUpload.Root so we can clear the picker's internal file list right
-  // after each auto-upload. With maxFiles > 1 the picker otherwise keeps
-  // accumulating every previously accepted file, which would resend
-  // already-imported files on every new selection/drop.
-  const imageUpload = useFileUpload({
-    maxFiles: Infinity,
-    accept: "image/*",
-    onFileChange: (details) => {
-      const files = filesFrom(details);
-      imageUpload.clearFiles();
-      imageUpload.clearRejectedFiles();
-      if (files.length) run(() => api.uploadImages(projectId, files));
-    },
-  });
-  const textUpload = useFileUpload({
-    accept: ".jsonl,.csv",
-    onFileChange: (details) => {
-      const file = filesFrom(details)[0];
-      textUpload.clearFiles();
-      textUpload.clearRejectedFiles();
-      if (file) run(() => api.uploadTexts(projectId, file));
-    },
-  });
+  // FileUpload.Root so we can read acceptedFiles/rejectedFiles as plain state
+  // (see the effects below) and clear the picker after each auto-upload.
+  // With maxFiles > 1 the picker otherwise keeps accumulating every
+  // previously accepted file, which would resend already-imported files on
+  // every new selection/drop.
+  const imageUpload = useFileUpload({ maxFiles: Infinity, accept: "image/*" });
+  const textUpload = useFileUpload({ accept: ".jsonl,.csv" });
+
+  // Deliberately not using onFileChange: zag's file-upload machine keeps
+  // acceptedFiles/rejectedFiles as two independent bindable stores, each
+  // invoking onFileChange separately with a *stale* read of the other field
+  // (via ctx.get) whenever a single drop/select touches both -- e.g. a valid
+  // image plus a rejected .txt in the same selection fires onFileChange
+  // twice, each carrying only half the files, splitting one upload into two
+  // and racing two `run()` calls whose reports silently overwrite one
+  // another. React batches both underlying context.set() calls from one
+  // browser event into a single commit, so acceptedFiles/rejectedFiles are
+  // reliably in sync with each other once this effect runs -- unlike
+  // onFileChange, which fires per-field before that commit lands.
+  useEffect(() => {
+    const files = [...imageUpload.acceptedFiles, ...imageUpload.rejectedFiles.map((r) => r.file)];
+    if (!files.length) return;
+    imageUpload.clearFiles();
+    run(() => api.uploadImages(projectId, files));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageUpload.acceptedFiles, imageUpload.rejectedFiles]);
+
+  useEffect(() => {
+    const file = [...textUpload.acceptedFiles, ...textUpload.rejectedFiles.map((r) => r.file)][0];
+    if (!file) return;
+    textUpload.clearFiles();
+    run(() => api.uploadTexts(projectId, file));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textUpload.acceptedFiles, textUpload.rejectedFiles]);
 
   return (
     <Card.Root>

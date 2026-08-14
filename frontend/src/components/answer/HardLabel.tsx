@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Button, Stack, Wrap } from "@chakra-ui/react";
 import ItemView from "../ItemView";
 import type { EditorProps } from "./types";
 
@@ -16,17 +17,19 @@ export default function HardLabel({ projectId, task, unit, onSave }: EditorProps
 
   const current = unit.answer?.label as string | undefined;
   return (
-    <div>
+    <Stack gap={4}>
       <ItemView projectId={projectId} item={unit.items[0]} size="large" />
-      <div className="row">
+      <Wrap gap={2}>
         {labels.map((label, n) => (
-          <button key={label}
-                  className={`big ${current === label ? "selected" : ""}`}
+          <Button key={label}
+                  size="lg"
+                  colorPalette="blue"
+                  variant={current === label ? "solid" : "outline"}
                   onClick={() => onSave({ label })}>
             {n + 1}. {label}
-          </button>
+          </Button>
         ))}
-      </div>
-    </div>
+      </Wrap>
+    </Stack>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Button, SimpleGrid, Stack, Wrap } from "@chakra-ui/react";
 import ItemView from "../ItemView";
 import type { EditorProps } from "./types";
 
@@ -16,17 +17,17 @@ export default function Preference({ projectId, unit, onSave }: EditorProps) {
 
   const [a, b] = unit.items;
   return (
-    <div>
-      <div className="row">
-        <div style={{ flex: 1 }}><ItemView projectId={projectId} item={a} size="large" /></div>
-        <div style={{ flex: 1 }}><ItemView projectId={projectId} item={b} size="large" /></div>
-      </div>
-      <div className="row">
-        <button className="big" onClick={() => onSave({ winner: 1 })}>← 左が良い</button>
-        <button className="big" onClick={() => onSave({ winner: 0 })}>= 引き分け</button>
-        <button className="big" onClick={() => onSave({ winner: -1 })}>右が良い →</button>
-        <button onClick={() => onSave({ winner: null })}>スキップ（スペース）</button>
-      </div>
-    </div>
+    <Stack gap={4}>
+      <SimpleGrid columns={2} gap={4}>
+        <ItemView projectId={projectId} item={a} size="large" />
+        <ItemView projectId={projectId} item={b} size="large" />
+      </SimpleGrid>
+      <Wrap gap={2}>
+        <Button size="lg" colorPalette="blue" onClick={() => onSave({ winner: 1 })}>← 左が良い</Button>
+        <Button size="lg" colorPalette="blue" variant="outline" onClick={() => onSave({ winner: 0 })}>= 引き分け</Button>
+        <Button size="lg" colorPalette="blue" onClick={() => onSave({ winner: -1 })}>右が良い →</Button>
+        <Button variant="ghost" onClick={() => onSave({ winner: null })}>スキップ（スペース）</Button>
+      </Wrap>
+    </Stack>
   );
 }

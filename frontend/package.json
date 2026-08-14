@@ -11,6 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.36.1",
+    "@emotion/react": "^11.14.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

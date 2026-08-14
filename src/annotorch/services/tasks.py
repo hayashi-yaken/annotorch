@@ -62,6 +62,10 @@ class TaskService:
                 ))
             return out
 
+    def delete_task(self, project_id: str, task_id: str) -> None:
+        with self.ws.open(project_id) as store:
+            store.delete_task(task_id)
+
     def list_units(self, project_id: str, task_id: str) -> list[UnitDetail]:
         with self.ws.open(project_id) as store:
             store.get_task(task_id)  # 未知の task は LookupError

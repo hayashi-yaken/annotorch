@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import { Button, Card, Heading, HStack, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Item, Project, Task, TaskWithProgress } from "../api";
 import ExportPanel from "../components/ExportPanel";
 import ImportPanel from "../components/ImportPanel";
 import ItemView from "../components/ItemView";
+import Layout from "../components/Layout";
 import TaskForm from "../components/TaskForm";
 
 export default function ProjectPage({ project, onBack, onAnnotate }: {
@@ -23,44 +25,56 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
   useEffect(() => { refresh(); }, [refresh]);
 
   return (
-    <div className="container">
-      <div className="row">
-        <button onClick={onBack}>← プロジェクト一覧</button>
-        <h1>{project.name}</h1>
-      </div>
-      {error && <p className="error">{error}</p>}
+    <Layout title={project.name}>
+      <Button alignSelf="flex-start" variant="outline" onClick={onBack}>
+        ← プロジェクト一覧
+      </Button>
+      {error && <Text color="red.500">{error}</Text>}
 
-      <h2>アイテム（{items.length}件）</h2>
-      <ImportPanel projectId={project.id} onImported={refresh} />
-      <div className="grid">
-        {items.slice(0, 50).map((item) => (
-          <ItemView key={item.id} projectId={project.id} item={item} />
+      <Stack gap={3}>
+        <Heading size="md">アイテム（{items.length}件）</Heading>
+        <ImportPanel projectId={project.id} onImported={refresh} />
+        <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} gap={3}>
+          {items.slice(0, 50).map((item) => (
+            <ItemView key={item.id} projectId={project.id} item={item} />
+          ))}
+        </SimpleGrid>
+        {items.length > 50 && <Text color="gray.500">…他 {items.length - 50} 件</Text>}
+      </Stack>
+
+      <Stack gap={3}>
+        <Heading size="md">タスク</Heading>
+        <TaskForm projectId={project.id} numItems={items.length} onCreated={refresh} />
+        {tasks.map((t) => (
+          <Card.Root key={t.id}>
+            <Card.Body>
+              <Stack gap={2}>
+                <HStack wrap="wrap" gap={3}>
+                  <Text fontWeight="bold">{t.name}</Text>
+                  <Text color="gray.500">{t.presentation}/{t.question}</Text>
+                  <Text color="gray.500">{t.answered_units}/{t.total_units} 回答済み</Text>
+                  <Button size="sm" onClick={() => onAnnotate(t)}>アノテーション</Button>
+                  <Button size="sm" variant="outline" onClick={() => setExportTask(t)}>
+                    エクスポート
+                  </Button>
+                </HStack>
+                <Progress.Root
+                  value={t.total_units ? (100 * t.answered_units) / t.total_units : 0}
+                >
+                  <Progress.Track>
+                    <Progress.Range />
+                  </Progress.Track>
+                </Progress.Root>
+              </Stack>
+            </Card.Body>
+          </Card.Root>
         ))}
-      </div>
-      {items.length > 50 && <p>…他 {items.length - 50} 件</p>}
+      </Stack>
 
-      <h2>タスク</h2>
-      <TaskForm projectId={project.id} numItems={items.length} onCreated={refresh} />
-      {tasks.map((t) => (
-        <div key={t.id} className="card">
-          <div className="row">
-            <strong>{t.name}</strong>
-            <span>{t.presentation}/{t.question}</span>
-            <span>{t.answered_units}/{t.total_units} 回答済み</span>
-            <button onClick={() => onAnnotate(t)}>アノテーション</button>
-            <button onClick={() => setExportTask(t)}>エクスポート</button>
-          </div>
-          <div className="progress">
-            <div style={{
-              width: `${t.total_units ? (100 * t.answered_units) / t.total_units : 0}%`,
-            }} />
-          </div>
-        </div>
-      ))}
       {exportTask && (
         <ExportPanel projectId={project.id} task={exportTask}
                      onClose={() => setExportTask(null)} />
       )}
-    </div>
+    </Layout>
   );
 }

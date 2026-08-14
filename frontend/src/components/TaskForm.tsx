@@ -113,7 +113,8 @@ export default function TaskForm({ projectId, numItems, onCreated }: {
                 <NumberInput.Root
                   min={1}
                   value={String(numUnits)}
-                  onValueChange={(d) => setNumUnits(d.valueAsNumber)}
+                  onValueChange={(d) =>
+                    setNumUnits(Number.isNaN(d.valueAsNumber) ? 0 : d.valueAsNumber)}
                 >
                   <NumberInput.Input />
                 </NumberInput.Root>
@@ -125,7 +126,8 @@ export default function TaskForm({ projectId, numItems, onCreated }: {
                 <NumberInput.Root
                   min={2}
                   value={String(groupSize)}
-                  onValueChange={(d) => setGroupSize(d.valueAsNumber)}
+                  onValueChange={(d) =>
+                    setGroupSize(Number.isNaN(d.valueAsNumber) ? 0 : d.valueAsNumber)}
                 >
                   <NumberInput.Input />
                 </NumberInput.Root>
@@ -135,7 +137,8 @@ export default function TaskForm({ projectId, numItems, onCreated }: {
               <Field.Label>seed</Field.Label>
               <NumberInput.Root
                 value={String(seed)}
-                onValueChange={(d) => setSeed(d.valueAsNumber)}
+                onValueChange={(d) =>
+                  setSeed(Number.isNaN(d.valueAsNumber) ? 0 : d.valueAsNumber)}
               >
                 <NumberInput.Input />
               </NumberInput.Root>

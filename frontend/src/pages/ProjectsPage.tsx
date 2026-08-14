@@ -46,7 +46,7 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
         {projects.map((p) => (
           <Card.Root key={p.id}>
             <Card.Body>
-              <HStack justify="space-between">
+              <HStack justify="space-between" wrap="wrap">
                 <Box>
                   <Text fontWeight="bold">{p.name}</Text>
                   <Text color="fg.muted">{p.description}</Text>

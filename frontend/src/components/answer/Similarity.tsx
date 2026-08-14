@@ -17,7 +17,7 @@ export default function Similarity({ projectId, task, unit, onSave }: EditorProp
       {task.config.similarity_mode === "binary" ? (
         <HStack gap={2}>
           <Button size="lg" colorPalette="blue" onClick={() => onSave({ same: true })}>同じ</Button>
-          <Button size="lg" colorPalette="blue" variant="outline" onClick={() => onSave({ same: false })}>違う</Button>
+          <Button size="lg" colorPalette="blue" onClick={() => onSave({ same: false })}>違う</Button>
         </HStack>
       ) : (
         <HStack gap={3}>

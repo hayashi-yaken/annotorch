@@ -11,7 +11,7 @@ export default function Layout({
   return (
     <Container maxW="4xl" py={6}>
       <Stack gap={4}>
-        {title && <Heading size="lg">{title}</Heading>}
+        {title && <Heading as="h1" size="lg">{title}</Heading>}
         {children}
       </Stack>
     </Container>

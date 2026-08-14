@@ -11,7 +11,7 @@ export default function ItemView({ projectId, item, size }: {
         src={api.itemFileUrl(projectId, item.id)}
         alt={item.id}
         w="full"
-        maxH={size === "large" ? "260px" : "100px"}
+        h={size === "large" ? "260px" : "100px"}
         objectFit="contain"
         bg="gray.100"
       />

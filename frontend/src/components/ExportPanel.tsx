@@ -53,6 +53,7 @@ export default function ExportPanel({ projectId, task, onClose }: {
                 value={String(seed)}
                 onValueChange={(d) => setSeed(Number.isNaN(d.valueAsNumber) ? 0 : d.valueAsNumber)}
               >
+                <NumberInput.Control />
                 <NumberInput.Input />
               </NumberInput.Root>
             </Field.Root>

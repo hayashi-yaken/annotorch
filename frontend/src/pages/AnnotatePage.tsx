@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import { Button, HStack, Progress, Text } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Answer, Project, Task, UnitView } from "../api";
+import Layout from "../components/Layout";
 import Grouping from "../components/answer/Grouping";
 import HardLabel from "../components/answer/HardLabel";
 import Preference from "../components/answer/Preference";
@@ -36,24 +38,24 @@ export default function AnnotatePage({ project, task, onBack }: {
 
   if (!units) {
     return (
-      <div className="container">
+      <Layout title={task.name}>
         {error ? (
           <>
-            <button onClick={onBack}>← 戻る</button>
-            <p className="error">{error}</p>
+            <Button alignSelf="flex-start" variant="outline" onClick={onBack}>← 戻る</Button>
+            <Text color="red.500">{error}</Text>
           </>
         ) : (
-          "読み込み中…"
+          <Text>読み込み中…</Text>
         )}
-      </div>
+      </Layout>
     );
   }
   if (units.length === 0) {
     return (
-      <div className="container">
-        <button onClick={onBack}>← 戻る</button>
-        <p>Unit がありません</p>
-      </div>
+      <Layout title={task.name}>
+        <Button alignSelf="flex-start" variant="outline" onClick={onBack}>← 戻る</Button>
+        <Text>Unit がありません</Text>
+      </Layout>
     );
   }
 
@@ -62,26 +64,29 @@ export default function AnnotatePage({ project, task, onBack }: {
   const editorProps = { projectId: project.id, task, unit, onSave: save };
 
   return (
-    <div className="container">
-      <div className="row">
-        <button onClick={onBack}>← 戻る</button>
-        <strong>{task.name}</strong>
-        <span>{index + 1} / {units.length}（回答済み {answered}）</span>
-        <button onClick={() => setIndex(Math.max(0, index - 1))}>前へ</button>
-        <button onClick={() => setIndex(Math.min(units.length - 1, index + 1))}>
-          次へ
-        </button>
-      </div>
-      <div className="progress">
-        <div style={{ width: `${(100 * answered) / units.length}%` }} />
-      </div>
-      {error && <p className="error">{error}</p>}
+    <Layout title={task.name}>
+      <HStack justify="space-between" wrap="wrap" gap={3}>
+        <Button variant="outline" onClick={onBack}>← 戻る</Button>
+        <HStack gap={3}>
+          <Text color="fg.muted">{index + 1} / {units.length}（回答済み {answered}）</Text>
+          <Button size="sm" onClick={() => setIndex(Math.max(0, index - 1))}>前へ</Button>
+          <Button size="sm" onClick={() => setIndex(Math.min(units.length - 1, index + 1))}>
+            次へ
+          </Button>
+        </HStack>
+      </HStack>
+      <Progress.Root value={(100 * answered) / units.length}>
+        <Progress.Track>
+          <Progress.Range />
+        </Progress.Track>
+      </Progress.Root>
+      {error && <Text color="red.500">{error}</Text>}
       {task.question === "hard_label" && <HardLabel key={unit.id} {...editorProps} />}
       {task.question === "soft_label" && <SoftLabel key={unit.id} {...editorProps} />}
       {task.question === "preference" && <Preference key={unit.id} {...editorProps} />}
       {task.question === "similarity" && <Similarity key={unit.id} {...editorProps} />}
       {task.question === "ranking" && <Ranking key={unit.id} {...editorProps} />}
       {task.question === "grouping" && <Grouping key={unit.id} {...editorProps} />}
-    </div>
+    </Layout>
   );
 }

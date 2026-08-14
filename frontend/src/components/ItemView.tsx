@@ -1,3 +1,4 @@
+import { Box, Image, Text } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Item } from "../api";
 
@@ -6,17 +7,19 @@ export default function ItemView({ projectId, item, size }: {
 }) {
   if (item.modality === "image") {
     return (
-      <img
-        className="item-thumb"
-        style={size === "large" ? { height: 260 } : undefined}
+      <Image
         src={api.itemFileUrl(projectId, item.id)}
         alt={item.id}
+        w="full"
+        maxH={size === "large" ? "260px" : "100px"}
+        objectFit="contain"
+        bg="gray.100"
       />
     );
   }
   return (
-    <div className="card" style={size === "large" ? { fontSize: "1.15rem" } : undefined}>
-      {item.text}
-    </div>
+    <Box borderWidth="1px" borderRadius="md" p={3}>
+      <Text fontSize={size === "large" ? "1.15rem" : "md"}>{item.text}</Text>
+    </Box>
   );
 }

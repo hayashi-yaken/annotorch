@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Box, Button, Card, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import Layout from "../components/Layout";
 import { api } from "../api";
 import type { Project } from "../api";
 
@@ -29,24 +31,36 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
   };
 
   return (
-    <div className="container">
-      <h1>annotorch</h1>
-      {error && <p className="error">{error}</p>}
-      <div className="row">
-        <input value={name} onChange={(e) => setName(e.target.value)}
-               placeholder="新しいプロジェクト名"
-               onKeyDown={(e) => e.key === "Enter" && create()} />
-        <button onClick={create}>作成</button>
-      </div>
-      {projects.map((p) => (
-        <div key={p.id} className="card row">
-          <strong>{p.name}</strong>
-          <span>{p.description}</span>
-          <button onClick={() => onOpen(p)}>開く</button>
-          <button onClick={() => remove(p)}>削除</button>
-        </div>
-      ))}
-      {projects.length === 0 && <p>プロジェクトはまだありません</p>}
-    </div>
+    <Layout title="annotorch">
+      {error && <Text color="red.500">{error}</Text>}
+      <HStack>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="新しいプロジェクト名"
+          onKeyDown={(e) => e.key === "Enter" && create()}
+        />
+        <Button onClick={create}>作成</Button>
+      </HStack>
+      <Stack gap={3}>
+        {projects.map((p) => (
+          <Card.Root key={p.id}>
+            <Card.Body>
+              <HStack justify="space-between">
+                <Box>
+                  <Text fontWeight="bold">{p.name}</Text>
+                  <Text color="fg.muted">{p.description}</Text>
+                </Box>
+                <HStack>
+                  <Button onClick={() => onOpen(p)}>開く</Button>
+                  <Button colorPalette="red" variant="outline" onClick={() => remove(p)}>削除</Button>
+                </HStack>
+              </HStack>
+            </Card.Body>
+          </Card.Root>
+        ))}
+      </Stack>
+      {projects.length === 0 && <Text>プロジェクトはまだありません</Text>}
+    </Layout>
   );
 }

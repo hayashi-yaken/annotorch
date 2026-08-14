@@ -51,7 +51,7 @@ export default function ExportPanel({ projectId, task, onClose }: {
               <Field.Label>seed</Field.Label>
               <NumberInput.Root
                 value={String(seed)}
-                onValueChange={(d) => setSeed(d.valueAsNumber)}
+                onValueChange={(d) => setSeed(Number.isNaN(d.valueAsNumber) ? 0 : d.valueAsNumber)}
               >
                 <NumberInput.Input />
               </NumberInput.Root>

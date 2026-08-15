@@ -122,6 +122,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
                               "text": item.text, "metadata": item.metadata}
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
+        is_anchor = task.config.pairing == "anchor"
         anchor_ids = set(task.config.anchor_item_ids or [])
         used_anchors: list[str] = []
 
@@ -137,7 +138,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
                     "annotator_id": a.annotator_id,
                     "split": split,
                 }
-                if anchor_ids:
+                if is_anchor:
                     anchor = next(i for i in units[a.unit_id].item_ids
                                   if i in anchor_ids)
                     row["anchor_item_id"] = anchor
@@ -153,7 +154,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
             conventions["preference_winner"] = (
                 "1 = first item in item_ids wins, -1 = second, 0 = tie"
             )
-        if anchor_ids:
+        if is_anchor:
             conventions["anchor_item_id"] = (
                 "the fixed reference item of the pair;"
                 " the other entry in item_ids varies"
@@ -172,7 +173,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
             "seed": seed,
             "splits": split_counts,
         }
-        if anchor_ids:
+        if is_anchor:
             manifest["anchors"] = used_anchors
         (tmp / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"

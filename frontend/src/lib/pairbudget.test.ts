@@ -11,6 +11,10 @@ describe("pairBudgetRange", () => {
     expect(pairBudgetRange(10, "anchor", 3)).toEqual({ min: 3, max: 7 });
   });
 
+  it("reports the full item range for anchor pairing with no anchors chosen", () => {
+    expect(pairBudgetRange(10, "anchor", 0)).toEqual({ min: 0, max: 10 });
+  });
+
   it("reports an empty range when there are too few items", () => {
     expect(pairBudgetRange(1, "random", 0)).toEqual({ min: 1, max: 0 });
     expect(pairBudgetRange(4, "anchor", 3)).toEqual({ min: 3, max: 1 });

@@ -33,6 +33,7 @@ export default function TaskForm({ projectId, items, onCreated }: {
   const needsLabels = question === "hard_label" || question === "soft_label";
   const isPair = presentation === "pair";
   const budget = pairBudgetRange(numItems, pairing, anchorIds.length);
+  const anchorsOk = !isPair || pairing !== "anchor" || anchorIds.length > 0;
   const budgetOk = !isPair || (numUnits >= budget.min && numUnits <= budget.max);
 
   const create = async () => {
@@ -177,7 +178,7 @@ export default function TaskForm({ projectId, items, onCreated }: {
                 <NumberInput.Input />
               </NumberInput.Root>
             </Field.Root>
-            <Button onClick={create} disabled={numItems === 0 || !budgetOk}>
+            <Button onClick={create} disabled={numItems === 0 || !anchorsOk || !budgetOk}>
               タスク作成
             </Button>
             {numItems === 0 && (
@@ -190,7 +191,13 @@ export default function TaskForm({ projectId, items, onCreated }: {
                           selected={anchorIds} onChange={setAnchorIds} />
           )}
 
-          {isPair && !budgetOk && (
+          {isPair && !anchorsOk && (
+            <Text fontSize="sm" color="red.500">
+              アンカーにするアイテムを1件以上選んでください
+            </Text>
+          )}
+
+          {isPair && anchorsOk && !budgetOk && (
             <Text fontSize="sm" color="red.500">
               Unit数は {budget.min}〜{budget.max} の範囲にしてください
               （アイテム {numItems} 件

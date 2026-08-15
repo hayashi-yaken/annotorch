@@ -86,12 +86,16 @@ def test_anchor_preference_normalizes_winner_to_anchor(tmp_path):
     assert [ds[n][1] for n in range(4)] == [1, -1, 1, 0]
 
 
-def test_anchor_similarity_keeps_score(tmp_path):
+def test_anchor_similarity_normalizes_anchor_to_first(tmp_path):
     rows = anchor_rows([(["b", "a"], {"score": 0.4})])
-    write_dataset(tmp_path, "similarity", None, rows, image_ids=["a", "b"])
+    write_dataset(tmp_path, "similarity", None, rows, text_items=[("a", "A"), ("b", "B")])
     patch_manifest(tmp_path, "similarity", pairing="anchor")
     ds = load(tmp_path, split="train")
-    assert ds[0][1] == 0.4
+    assert type(ds).__name__ == "AnchorSimilarityDataset"
+    (obj_a, obj_b), score = ds[0]
+    assert obj_a == "A"
+    assert obj_b == "B"
+    assert score == 0.4
 
 
 def test_random_pairing_still_uses_plain_dataset(tmp_path):

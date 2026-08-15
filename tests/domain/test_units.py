@@ -109,9 +109,10 @@ def test_anchor_partners_are_not_reused():
 
 
 def test_anchor_counts_are_balanced():
-    units = generate_units(make_anchor_task(3, seed=3), ITEMS)
-    counts = Counter(i for u in units for i in u.item_ids if i in ANCHORS)
-    assert sorted(counts.values()) == [1, 2]
+    for seed in range(10):
+        units = generate_units(make_anchor_task(3, seed=seed), ITEMS)
+        counts = Counter(i for u in units for i in u.item_ids if i in ANCHORS)
+        assert sorted(counts.values()) == [1, 2]
 
 
 def test_anchor_deterministic_by_seed():

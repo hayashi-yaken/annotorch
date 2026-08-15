@@ -83,6 +83,27 @@ def test_roundtrip_preference_image(env):
     assert w.tolist() == [1] * 5  # 1 = item_ids の1番目の勝ち
 
 
+def test_roundtrip_anchor_preference_image(env):
+    project, services, tmp_path = env
+    projects, tasks, exports = services
+    anchor = projects.list_items(project.id)[0].id
+    task, _ = tasks.create_task(
+        project.id, "anchor-pref", Presentation.PAIR, QuestionType.PREFERENCE,
+        TaskConfig(num_units=3, seed=3, pairing="anchor", anchor_item_ids=[anchor]))
+    for unit in tasks.list_units(project.id, task.id):
+        winner = 1 if unit.items[0].id == anchor else -1
+        tasks.save_answer(project.id, task.id, unit.id, {"winner": winner})
+    exports.export(project.id, task.id, tmp_path / "ds-anchor")
+
+    ds = load(tmp_path / "ds-anchor", split="train", transform=TO_TENSOR)
+    assert len(ds) == 3
+    assert ds.manifest["anchors"] == [anchor]
+    # 提示順によらずアンカーの勝ちとして回答したので、正規化後は全て 1
+    (xa, _), w = next(iter(DataLoader(ds, batch_size=3)))
+    assert xa.shape == (3, 8, 8, 3)
+    assert w.tolist() == [1, 1, 1]
+
+
 def test_roundtrip_preference_skip_excluded(env):
     project, services, tmp_path = env
     _, tasks, exports = services

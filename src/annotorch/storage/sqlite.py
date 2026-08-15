@@ -180,6 +180,19 @@ class SqliteStore:
         ).fetchall()
         return [self._row_to_task(r) for r in rows]
 
+    def delete_task(self, task_id: str) -> None:
+        # 外部キーの下から順に消す（annotations -> units -> task）。
+        # 1トランザクションなので、途中で失敗すれば何も消えない。
+        self.get_task(task_id)  # 未知の task は LookupError
+        with self.conn:
+            self.conn.execute(
+                "DELETE FROM annotations WHERE unit_id IN"
+                " (SELECT id FROM units WHERE task_id = ?)",
+                (task_id,),
+            )
+            self.conn.execute("DELETE FROM units WHERE task_id = ?", (task_id,))
+            self.conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+
     # -- units --------------------------------------------------------------
 
     def add_units(self, units: list[Unit]) -> None:

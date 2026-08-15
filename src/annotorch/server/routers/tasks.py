@@ -20,3 +20,9 @@ def create_task(pid: str, body: TaskCreate,
 @router.get("/projects/{pid}/tasks")
 def list_tasks(pid: str, svc: TaskService = Depends(task_service)):
     return svc.list_tasks_with_progress(pid)
+
+
+@router.delete("/projects/{pid}/tasks/{tid}")
+def delete_task(pid: str, tid: str, svc: TaskService = Depends(task_service)):
+    svc.delete_task(pid, tid)
+    return {"ok": True}

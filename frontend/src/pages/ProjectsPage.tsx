@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { Box, Button, Card, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Layout from "../components/Layout";
 import { api } from "../api";
 import type { Project } from "../api";
 
@@ -6,6 +9,7 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
   const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
 
   const refresh = () =>
     api.listProjects().then(setProjects).catch((e) => setError(String(e)));
@@ -21,7 +25,7 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
   };
 
   const remove = async (p: Project) => {
-    if (!confirm(`プロジェクト「${p.name}」を削除する？`)) return;
+    setPendingDelete(null);
     try {
       await api.deleteProject(p.id);
       refresh();
@@ -29,24 +33,48 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
   };
 
   return (
-    <div className="container">
-      <h1>annotorch</h1>
-      {error && <p className="error">{error}</p>}
-      <div className="row">
-        <input value={name} onChange={(e) => setName(e.target.value)}
-               placeholder="新しいプロジェクト名"
-               onKeyDown={(e) => e.key === "Enter" && create()} />
-        <button onClick={create}>作成</button>
-      </div>
-      {projects.map((p) => (
-        <div key={p.id} className="card row">
-          <strong>{p.name}</strong>
-          <span>{p.description}</span>
-          <button onClick={() => onOpen(p)}>開く</button>
-          <button onClick={() => remove(p)}>削除</button>
-        </div>
-      ))}
-      {projects.length === 0 && <p>プロジェクトはまだありません</p>}
-    </div>
+    <Layout title="annotorch">
+      {error && <Text color="red.500">{error}</Text>}
+      <HStack>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="新しいプロジェクト名"
+          onKeyDown={(e) => e.key === "Enter" && create()}
+        />
+        <Button onClick={create}>作成</Button>
+      </HStack>
+      <Stack gap={3}>
+        {projects.map((p) => (
+          <Card.Root key={p.id}>
+            <Card.Body>
+              <HStack justify="space-between" wrap="wrap">
+                <Box>
+                  <Text fontWeight="bold">{p.name}</Text>
+                  <Text color="fg.muted">{p.description}</Text>
+                </Box>
+                <HStack>
+                  <Button onClick={() => onOpen(p)}>開く</Button>
+                  <Button colorPalette="red" variant="outline"
+                          onClick={() => setPendingDelete(p)}>削除</Button>
+                </HStack>
+              </HStack>
+            </Card.Body>
+          </Card.Root>
+        ))}
+      </Stack>
+      {projects.length === 0 && <Text>プロジェクトはまだありません</Text>}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="プロジェクトを削除"
+        message={pendingDelete
+          ? `プロジェクト「${pendingDelete.name}」を削除します。\n`
+            + "アイテム・タスク・回答もすべて削除され、元に戻せません。"
+          : ""}
+        onConfirm={() => pendingDelete && remove(pendingDelete)}
+        onCancel={() => setPendingDelete(null)}
+      />
+    </Layout>
   );
 }

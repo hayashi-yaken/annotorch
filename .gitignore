@@ -7,3 +7,5 @@ uv.lock
 .DS_Store
 frontend/node_modules/
 src/annotorch/server/static/
+docs/superpowers/
+CLAUDE.md

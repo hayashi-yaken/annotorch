@@ -26,7 +26,7 @@ uv run annotorch serve
 ## 作ったデータセットを使う
 
 ```bash
-pip install -e .   # 学習環境に（server extra は不要）
+pip install -e ".[torch]"   # 学習環境に
 ```
 
 ```python
@@ -47,3 +47,6 @@ loader = DataLoader(ds, batch_size=32, shuffle=True)
 uv run pytest tests/ -v          # バックエンド
 cd frontend && npm run test      # フロントのロジックテスト
 ```
+
+フロントエンドは React + Chakra UI v3。`cd frontend && npm run dev` で :5173 に起動、
+`npm run build` で `src/annotorch/server/static` に出力する。

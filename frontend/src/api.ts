@@ -86,6 +86,8 @@ export const api = {
     question: QuestionType; config: TaskConfig;
   }) => req<{ task: Task; num_units: number }>(`/projects/${pid}/tasks`,
     json("POST", body)),
+  deleteTask: (pid: string, tid: string) =>
+    req<{ ok: boolean }>(`/projects/${pid}/tasks/${tid}`, { method: "DELETE" }),
 
   listUnits: (pid: string, tid: string) =>
     req<UnitView[]>(`/projects/${pid}/tasks/${tid}/units`),

@@ -26,7 +26,7 @@ uv run annotorch serve
 ## 作ったデータセットを使う
 
 ```bash
-pip install -e .   # 学習環境に（server extra は不要）
+pip install -e ".[torch]"   # 学習環境に
 ```
 
 ```python

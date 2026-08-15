@@ -55,7 +55,7 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
 
       <Stack gap={3}>
         <Heading size="md">タスク</Heading>
-        <TaskForm projectId={project.id} numItems={items.length} onCreated={refresh} />
+        <TaskForm projectId={project.id} items={items} onCreated={refresh} />
         {tasks.map((t) => (
           <Card.Root key={t.id}>
             <Card.Body>

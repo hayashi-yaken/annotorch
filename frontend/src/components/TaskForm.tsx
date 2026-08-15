@@ -3,7 +3,9 @@ import {
   Button, Card, Field, HStack, Input, NativeSelect, NumberInput, Stack, Text,
 } from "@chakra-ui/react";
 import { api } from "../api";
-import type { Presentation, QuestionType, TaskConfig } from "../api";
+import type { Item, Presentation, QuestionType, TaskConfig } from "../api";
+import { pairBudgetRange } from "../lib/pairbudget";
+import AnchorPicker from "./AnchorPicker";
 
 const QUESTIONS: Record<Presentation, QuestionType[]> = {
   single: ["hard_label", "soft_label"],
@@ -11,8 +13,8 @@ const QUESTIONS: Record<Presentation, QuestionType[]> = {
   group: ["ranking", "grouping"],
 };
 
-export default function TaskForm({ projectId, numItems, onCreated }: {
-  projectId: string; numItems: number; onCreated: () => void;
+export default function TaskForm({ projectId, items, onCreated }: {
+  projectId: string; items: Item[]; onCreated: () => void;
 }) {
   const [name, setName] = useState("");
   const [presentation, setPresentation] = useState<Presentation>("single");
@@ -23,9 +25,15 @@ export default function TaskForm({ projectId, numItems, onCreated }: {
   const [numUnits, setNumUnits] = useState(50);
   const [groupSize, setGroupSize] = useState(4);
   const [seed, setSeed] = useState(0);
+  const [pairing, setPairing] = useState<"random" | "anchor">("random");
+  const [anchorIds, setAnchorIds] = useState<string[]>([]);
   const [error, setError] = useState("");
 
+  const numItems = items.length;
   const needsLabels = question === "hard_label" || question === "soft_label";
+  const isPair = presentation === "pair";
+  const budget = pairBudgetRange(numItems, pairing, anchorIds.length);
+  const budgetOk = !isPair || (numUnits >= budget.min && numUnits <= budget.max);
 
   const create = async () => {
     setError("");
@@ -36,6 +44,10 @@ export default function TaskForm({ projectId, numItems, onCreated }: {
     if (question === "similarity") config.similarity_mode = similarityMode;
     if (presentation !== "single") config.num_units = numUnits;
     if (presentation === "group") config.group_size = groupSize;
+    if (isPair && pairing === "anchor") {
+      config.pairing = "anchor";
+      config.anchor_item_ids = anchorIds;
+    }
     try {
       await api.createTask(projectId, {
         name: name.trim() || `${presentation}-${question}`,
@@ -135,6 +147,25 @@ export default function TaskForm({ projectId, numItems, onCreated }: {
                 </NumberInput.Root>
               </Field.Root>
             )}
+            {isPair && (
+              <Field.Root width="12rem">
+                <Field.Label>ペアの作り方</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    value={pairing}
+                    onChange={(e) => {
+                      const p = e.target.value as "random" | "anchor";
+                      setPairing(p);
+                      if (p === "random") setAnchorIds([]);
+                    }}
+                  >
+                    <option value="random">ランダム</option>
+                    <option value="anchor">アンカー基準</option>
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+            )}
             <Field.Root width="6rem">
               <Field.Label>seed</Field.Label>
               <NumberInput.Root
@@ -146,11 +177,26 @@ export default function TaskForm({ projectId, numItems, onCreated }: {
                 <NumberInput.Input />
               </NumberInput.Root>
             </Field.Root>
-            <Button onClick={create} disabled={numItems === 0}>タスク作成</Button>
+            <Button onClick={create} disabled={numItems === 0 || !budgetOk}>
+              タスク作成
+            </Button>
             {numItems === 0 && (
               <Text fontSize="sm" color="gray.500">（先にアイテムを取り込んでね）</Text>
             )}
           </HStack>
+
+          {isPair && pairing === "anchor" && (
+            <AnchorPicker projectId={projectId} items={items}
+                          selected={anchorIds} onChange={setAnchorIds} />
+          )}
+
+          {isPair && !budgetOk && (
+            <Text fontSize="sm" color="red.500">
+              Unit数は {budget.min}〜{budget.max} の範囲にしてください
+              （アイテム {numItems} 件
+              {pairing === "anchor" && `・アンカー ${anchorIds.length} 件`}）
+            </Text>
+          )}
 
           {error && <Text color="red.500">{error}</Text>}
         </Stack>

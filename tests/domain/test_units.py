@@ -18,29 +18,46 @@ def test_single_one_unit_per_item():
     assert [u.position for u in units] == list(range(6))
 
 
-def test_pair_units_are_distinct_pairs():
-    task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=10, seed=42)
+def test_pair_items_are_not_reused():
+    task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=3, seed=42)
     units = generate_units(task, ITEMS)
-    assert len(units) == 10
-    seen = set()
-    for u in units:
-        assert len(u.item_ids) == 2
-        pair = frozenset(u.item_ids)
-        assert pair not in seen
-        seen.add(pair)
+    assert len(units) == 3
+    used = [i for u in units for i in u.item_ids]
+    assert len(used) == 6
+    assert len(set(used)) == 6
+
+
+def test_pair_uses_every_item_when_budget_matches():
+    task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=3, seed=1)
+    units = generate_units(task, ITEMS)
+    assert {i for u in units for i in u.item_ids} == set(ITEMS)
+
+
+def test_pair_leaves_remainder_when_budget_is_smaller():
+    task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=2, seed=1)
+    units = generate_units(task, ITEMS)
+    assert len({i for u in units for i in u.item_ids}) == 4
+
+
+def test_pair_seed_changes_result():
+    a = [u.item_ids for u in generate_units(
+        make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=3, seed=1), ITEMS)]
+    b = [u.item_ids for u in generate_units(
+        make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=3, seed=2), ITEMS)]
+    assert a != b
+
+
+def test_pair_errors_when_items_insufficient():
+    task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=4, seed=0)
+    with pytest.raises(ValueError, match="at least 8 items"):
+        generate_units(task, ITEMS)
 
 
 def test_pair_deterministic_by_seed():
-    task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=5, seed=1)
+    task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=3, seed=1)
     a = [u.item_ids for u in generate_units(task, ITEMS)]
     b = [u.item_ids for u in generate_units(task, ITEMS)]
     assert a == b
-
-
-def test_pair_capped_at_all_pairs():
-    task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=999, seed=0)
-    units = generate_units(task, ITEMS)
-    assert len(units) == 15  # C(6,2)
 
 
 def test_pair_requires_num_units():

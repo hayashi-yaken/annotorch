@@ -18,7 +18,7 @@ from annotorch.storage.workspace import Workspace
 from annotorch.datasets import load
 
 TO_TENSOR = lambda img: torch.from_numpy(np.array(img, dtype=np.float32) / 255.0)
-NUM_ITEMS = 6
+NUM_ITEMS = 10
 
 
 @pytest.fixture

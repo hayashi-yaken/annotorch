@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import random
-from itertools import combinations
 
 from .models import Presentation, Task, Unit
 
 
 def generate_units(task: Task, item_ids: list[str]) -> list[Unit]:
-    """タスク定義に従って提示Unitを生成する（v1はランダム戦略のみ）。"""
+    """タスク定義に従って提示Unitを生成する。"""
     if task.presentation == Presentation.SINGLE:
         return [
             Unit(task_id=task.id, item_ids=[i], position=n)
@@ -19,16 +18,18 @@ def generate_units(task: Task, item_ids: list[str]) -> list[Unit]:
     if task.presentation == Presentation.PAIR:
         if task.config.num_units is None:
             raise ValueError("pair task requires config.num_units")
-        if len(item_ids) < 2:
-            raise ValueError("pair task requires at least 2 items")
-        all_pairs = list(combinations(item_ids, 2))
-        n = min(task.config.num_units, len(all_pairs))
-        pairs = rng.sample(all_pairs, n)
-        units = []
-        for pos, (a, b) in enumerate(pairs):
-            ordered = [a, b] if rng.random() < 0.5 else [b, a]
-            units.append(Unit(task_id=task.id, item_ids=ordered, position=pos))
-        return units
+        n = task.config.num_units
+        if 2 * n > len(item_ids):
+            raise ValueError(
+                f"pair task requires at least {2 * n} items for num_units={n}"
+                f" (got {len(item_ids)})"
+            )
+        picked = rng.sample(item_ids, 2 * n)
+        return [
+            Unit(task_id=task.id, item_ids=[picked[2 * p], picked[2 * p + 1]],
+                 position=p)
+            for p in range(n)
+        ]
 
     if task.presentation == Presentation.GROUP:
         size = task.config.group_size

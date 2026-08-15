@@ -38,7 +38,7 @@ def test_api_roundtrip_hard_label(client, tmp_path):
 
 def test_api_roundtrip_preference_with_skip(client, tmp_path):
     pid = create_project(client, "rt-pref")
-    upload_pngs(client, pid, 4)
+    upload_pngs(client, pid, 6)
     task = client.post(f"/api/projects/{pid}/tasks", json={
         "name": "pref", "presentation": "pair", "question": "preference",
         "config": {"num_units": 3, "seed": 0},

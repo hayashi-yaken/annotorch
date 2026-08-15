@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Literal
@@ -97,7 +98,8 @@ class Task(BaseModel):
             if not anchors:
                 raise ValueError("anchor pairing requires config.anchor_item_ids")
             if len(set(anchors)) != len(anchors):
-                raise ValueError("config.anchor_item_ids must not contain duplicates")
+                dups = [id for id, count in Counter(anchors).items() if count > 1]
+                raise ValueError(f"config.anchor_item_ids must not contain duplicates (found: {dups})")
         elif self.config.anchor_item_ids:
             raise ValueError(
                 "config.anchor_item_ids requires config.pairing='anchor'"

@@ -92,5 +92,5 @@ def test_random_pairing_rejects_anchor_ids():
 
 
 def test_anchor_ids_must_be_unique():
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match="found: .* 'a'"):
         _anchor_task(pairing="anchor", anchor_item_ids=["a", "a"])

@@ -7,9 +7,11 @@ import ExportPanel from "../components/ExportPanel";
 import ImportPanel from "../components/ImportPanel";
 import ItemView from "../components/ItemView";
 import Layout from "../components/Layout";
+import Loader from "../components/Loader";
 import TaskForm from "../components/TaskForm";
 import { toaster } from "../lib/toaster";
 import { message } from "../lib/errors";
+import { useAsync } from "../lib/useAsync";
 
 export default function ProjectPage({ project, onBack, onAnnotate }: {
   project: Project;
@@ -20,26 +22,35 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
   const [tasks, setTasks] = useState<TaskWithProgress[]>([]);
   const [exportTask, setExportTask] = useState<Task | null>(null);
   const [deleteTask, setDeleteTask] = useState<TaskWithProgress | null>(null);
+  const [ready, setReady] = useState(false);
 
-  const refresh = useCallback(() => {
-    api.listItems(project.id).then(setItems).catch((e) =>
-      toaster.error({ title: "アイテムを取得できませんでした", description: message(e) }));
-    api.listTasks(project.id).then(setTasks).catch((e) =>
-      toaster.error({ title: "タスクを取得できませんでした", description: message(e) }));
+  const refresh = useCallback(async () => {
+    try {
+      const [loadedItems, loadedTasks] = await Promise.all([
+        api.listItems(project.id),
+        api.listTasks(project.id),
+      ]);
+      setItems(loadedItems);
+      setTasks(loadedTasks);
+    } catch (e) {
+      toaster.error({ title: "プロジェクトを読み込めませんでした", description: message(e) });
+    } finally {
+      setReady(true);
+    }
   }, [project.id]);
   useEffect(() => { refresh(); }, [refresh]);
 
-  const removeTask = async (t: TaskWithProgress) => {
-    setDeleteTask(null);
+  const removeTask = useAsync(async (t: TaskWithProgress) => {
     try {
       await api.deleteTask(project.id, t.id);
+      setDeleteTask(null);
       if (exportTask?.id === t.id) setExportTask(null);
-      refresh();
+      await refresh();
       toaster.success({ title: `タスク「${t.name}」を削除しました` });
     } catch (e) {
       toaster.error({ title: "タスクを削除できませんでした", description: message(e) });
     }
-  };
+  });
 
   return (
     <Layout title={project.name}>
@@ -47,7 +58,9 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
         ← プロジェクト一覧
       </Button>
 
-      <Stack gap={3}>
+      {!ready && <Loader />}
+
+      <Stack gap={3} hidden={!ready}>
         <Heading size="md">アイテム（{items.length}件）</Heading>
         <ImportPanel projectId={project.id} onImported={refresh} />
         <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} gap={3}>
@@ -58,7 +71,7 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
         {items.length > 50 && <Text color="gray.500">…他 {items.length - 50} 件</Text>}
       </Stack>
 
-      <Stack gap={3}>
+      <Stack gap={3} hidden={!ready}>
         <Heading size="md">タスク</Heading>
         <TaskForm projectId={project.id} items={items} onCreated={refresh} />
         {tasks.map((t) => (
@@ -103,7 +116,8 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
           ? `タスク「${deleteTask.name}」を削除します。\n`
             + `回答 ${deleteTask.answered_units} 件も一緒に削除され、元に戻せません。`
           : ""}
-        onConfirm={() => deleteTask && removeTask(deleteTask)}
+        loading={removeTask.pending}
+        onConfirm={() => deleteTask && removeTask.run(deleteTask)}
         onCancel={() => setDeleteTask(null)}
       />
     </Layout>

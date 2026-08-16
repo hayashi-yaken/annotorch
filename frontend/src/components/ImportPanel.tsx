@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Button, Card, FileUpload, HStack, Input, Stack, Text, useFileUpload } from "@chakra-ui/react";
+import {
+  Button, Card, FileUpload, HStack, Input, Spinner, Stack, Text, useFileUpload,
+} from "@chakra-ui/react";
 import { api } from "../api";
 import { message } from "../lib/errors";
 import { toaster } from "../lib/toaster";
@@ -9,8 +11,10 @@ export default function ImportPanel({ projectId, onImported }: {
   projectId: string; onImported: () => void;
 }) {
   const [folder, setFolder] = useState("");
+  const [importing, setImporting] = useState<string | null>(null);
 
   const run = async (label: string, fn: () => Promise<ImportReport>) => {
+    setImporting(label);
     try {
       const report = await fn();
       const skipped = report.skipped
@@ -27,6 +31,8 @@ export default function ImportPanel({ projectId, onImported }: {
       onImported();
     } catch (e) {
       toaster.error({ title: `${label}の取り込みに失敗しました`, description: message(e) });
+    } finally {
+      setImporting(null);
     }
   };
 
@@ -76,7 +82,9 @@ export default function ImportPanel({ projectId, onImported }: {
               <FileUpload.HiddenInput />
               <FileUpload.Dropzone>
                 <FileUpload.DropzoneContent>
-                  画像をドロップ、またはクリックで選択
+                  {importing === "画像"
+                    ? <HStack gap={2}><Spinner size="sm" /><Text>取り込み中…</Text></HStack>
+                    : "画像をドロップ、またはクリックで選択"}
                 </FileUpload.DropzoneContent>
               </FileUpload.Dropzone>
             </FileUpload.RootProvider>
@@ -88,7 +96,9 @@ export default function ImportPanel({ projectId, onImported }: {
               <FileUpload.HiddenInput />
               <FileUpload.Dropzone>
                 <FileUpload.DropzoneContent>
-                  JSONL / CSV をドロップ、またはクリックで選択
+                  {importing === "テキスト"
+                    ? <HStack gap={2}><Spinner size="sm" /><Text>取り込み中…</Text></HStack>
+                    : "JSONL / CSV をドロップ、またはクリックで選択"}
                 </FileUpload.DropzoneContent>
               </FileUpload.Dropzone>
             </FileUpload.RootProvider>
@@ -103,6 +113,8 @@ export default function ImportPanel({ projectId, onImported }: {
                 placeholder="Docker では /import 配下のパス"
               />
               <Button
+                loading={importing === "フォルダ"}
+                loadingText="取り込み中…"
                 onClick={() =>
                   folder && run("フォルダ", () => api.importFolder(projectId, folder))}
               >

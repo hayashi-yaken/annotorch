@@ -8,6 +8,7 @@ import { message } from "../lib/errors";
 import { pairBudgetRange } from "../lib/pairbudget";
 import AnchorPicker from "./AnchorPicker";
 import { toaster } from "../lib/toaster";
+import { useAsync } from "../lib/useAsync";
 
 const QUESTIONS: Record<Presentation, QuestionType[]> = {
   single: ["hard_label", "soft_label"],
@@ -37,7 +38,7 @@ export default function TaskForm({ projectId, items, onCreated }: {
   const anchorsOk = !isPair || pairing !== "anchor" || anchorIds.length > 0;
   const budgetOk = !isPair || (numUnits >= budget.min && numUnits <= budget.max);
 
-  const create = async () => {
+  const create = useAsync(async () => {
     const config: TaskConfig = { seed };
     if (needsLabels) {
       config.labels = labels.split(",").map((s) => s.trim()).filter(Boolean);
@@ -62,7 +63,7 @@ export default function TaskForm({ projectId, items, onCreated }: {
     } catch (e) {
       toaster.error({ title: "タスクを作成できませんでした", description: message(e) });
     }
-  };
+  });
 
   return (
     <Card.Root>
@@ -184,7 +185,12 @@ export default function TaskForm({ projectId, items, onCreated }: {
                 <NumberInput.Input />
               </NumberInput.Root>
             </Field.Root>
-            <Button onClick={create} disabled={numItems === 0 || !anchorsOk || !budgetOk}>
+            <Button
+              onClick={() => create.run()}
+              loading={create.pending}
+              loadingText="作成中…"
+              disabled={numItems === 0 || !anchorsOk || !budgetOk}
+            >
               タスク作成
             </Button>
             {numItems === 0 && (

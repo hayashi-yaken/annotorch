@@ -1,11 +1,32 @@
 import { useEffect, useState } from "react";
 import {
-  Button, Card, FileUpload, HStack, Input, Spinner, Stack, Text, useFileUpload,
+  Button, Card, FileUpload, Flex, HStack, Input, Spinner, Stack, Text, useFileUpload,
 } from "@chakra-ui/react";
+import type { UseFileUploadReturn } from "@chakra-ui/react";
 import { api } from "../api";
 import { message } from "../lib/errors";
 import { toaster } from "../lib/toaster";
 import type { ImportReport } from "../api";
+
+function Dropzone({ label, hint, upload, busy }: {
+  label: string; hint: string; upload: UseFileUploadReturn; busy: boolean;
+}) {
+  return (
+    <Stack gap={2} flex="1" minW="0">
+      <Text fontWeight="bold">{label}</Text>
+      <FileUpload.RootProvider value={upload}>
+        <FileUpload.HiddenInput />
+        <FileUpload.Dropzone w="full" minH="9rem">
+          <FileUpload.DropzoneContent>
+            {busy
+              ? <HStack gap={2}><Spinner size="sm" /><Text>取り込み中…</Text></HStack>
+              : hint}
+          </FileUpload.DropzoneContent>
+        </FileUpload.Dropzone>
+      </FileUpload.RootProvider>
+    </Stack>
+  );
+}
 
 export default function ImportPanel({ projectId, onImported }: {
   projectId: string; onImported: () => void;
@@ -76,33 +97,20 @@ export default function ImportPanel({ projectId, onImported }: {
     <Card.Root>
       <Card.Body>
         <Stack gap={5}>
-          <Stack gap={2}>
-            <Text fontWeight="bold">画像を取り込む</Text>
-            <FileUpload.RootProvider value={imageUpload}>
-              <FileUpload.HiddenInput />
-              <FileUpload.Dropzone>
-                <FileUpload.DropzoneContent>
-                  {importing === "画像"
-                    ? <HStack gap={2}><Spinner size="sm" /><Text>取り込み中…</Text></HStack>
-                    : "画像をドロップ、またはクリックで選択"}
-                </FileUpload.DropzoneContent>
-              </FileUpload.Dropzone>
-            </FileUpload.RootProvider>
-          </Stack>
-
-          <Stack gap={2}>
-            <Text fontWeight="bold">テキスト（JSONL / CSV）を取り込む</Text>
-            <FileUpload.RootProvider value={textUpload}>
-              <FileUpload.HiddenInput />
-              <FileUpload.Dropzone>
-                <FileUpload.DropzoneContent>
-                  {importing === "テキスト"
-                    ? <HStack gap={2}><Spinner size="sm" /><Text>取り込み中…</Text></HStack>
-                    : "JSONL / CSV をドロップ、またはクリックで選択"}
-                </FileUpload.DropzoneContent>
-              </FileUpload.Dropzone>
-            </FileUpload.RootProvider>
-          </Stack>
+          <Flex direction={{ base: "column", md: "row" }} gap={4} align="stretch">
+            <Dropzone
+              label="画像を取り込む"
+              hint="画像をドロップ、またはクリックで選択"
+              upload={imageUpload}
+              busy={importing === "画像"}
+            />
+            <Dropzone
+              label="テキスト（JSONL / CSV）を取り込む"
+              hint="JSONL / CSV をドロップ、またはクリックで選択"
+              upload={textUpload}
+              busy={importing === "テキスト"}
+            />
+          </Flex>
 
           <Stack gap={2}>
             <Text fontWeight="bold">サーバー上のフォルダから取り込む</Text>

@@ -193,9 +193,6 @@ export default function TaskForm({ projectId, items, onCreated }: {
             >
               タスク作成
             </Button>
-            {numItems === 0 && (
-              <Text fontSize="sm" color="gray.500">（先にアイテムを取り込んでね）</Text>
-            )}
           </HStack>
 
           {isPair && pairing === "anchor" && (

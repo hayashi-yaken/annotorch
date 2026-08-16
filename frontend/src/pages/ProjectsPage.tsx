@@ -53,7 +53,6 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="新しいプロジェクト名"
-          onKeyDown={(e) => e.key === "Enter" && create.run()}
         />
         <Button loading={create.pending} loadingText="作成中…" onClick={() => create.run()}>
           作成

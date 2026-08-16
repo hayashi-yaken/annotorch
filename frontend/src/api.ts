@@ -17,6 +17,8 @@ export interface TaskConfig {
   group_size?: number | null;
   num_units?: number | null;
   seed?: number;
+  pairing?: "random" | "anchor";
+  anchor_item_ids?: string[];
 }
 export interface Task {
   id: string; project_id: string; name: string;

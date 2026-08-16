@@ -17,12 +17,21 @@ def pair_rows(answers):
     ]
 
 
-def patch_manifest(root, question):
+def patch_manifest(root, question, pairing="random"):
     import json
     manifest = json.loads((root / "manifest.json").read_text())
     manifest["task"]["presentation"] = "pair"
     manifest["task"]["question"] = question
+    manifest["task"]["pairing"] = pairing
     (root / "manifest.json").write_text(json.dumps(manifest))
+
+
+def anchor_rows(cases):
+    return [
+        {"unit_id": f"u{n}", "item_ids": ids, "anchor_item_id": "a",
+         "answer": ans, "annotator_id": "default", "split": "train"}
+        for n, (ids, ans) in enumerate(cases)
+    ]
 
 
 def test_preference_sign_convention(tmp_path):
@@ -62,3 +71,44 @@ def test_similarity_binary_maps_to_float(tmp_path):
     ds = load(tmp_path, split="train")
     assert ds[0][1] == 1.0
     assert ds[1][1] == 0.0
+
+
+def test_anchor_preference_normalizes_winner_to_anchor(tmp_path):
+    rows = anchor_rows([
+        (["a", "b"], {"winner": 1}),
+        (["b", "a"], {"winner": 1}),
+        (["b", "a"], {"winner": -1}),
+        (["a", "b"], {"winner": 0}),
+    ])
+    write_dataset(tmp_path, "preference", None, rows, image_ids=["a", "b"])
+    patch_manifest(tmp_path, "preference", pairing="anchor")
+    ds = load(tmp_path, split="train")
+    assert [ds[n][1] for n in range(4)] == [1, -1, 1, 0]
+
+
+def test_anchor_similarity_normalizes_anchor_to_first(tmp_path):
+    rows = anchor_rows([(["b", "a"], {"score": 0.4})])
+    write_dataset(tmp_path, "similarity", None, rows, text_items=[("a", "A"), ("b", "B")])
+    patch_manifest(tmp_path, "similarity", pairing="anchor")
+    ds = load(tmp_path, split="train")
+    assert type(ds).__name__ == "AnchorSimilarityDataset"
+    (obj_a, obj_b), score = ds[0]
+    assert obj_a == "A"
+    assert obj_b == "B"
+    assert score == 0.4
+
+
+def test_random_pairing_still_uses_plain_dataset(tmp_path):
+    rows = pair_rows([{"winner": 1}])
+    write_dataset(tmp_path, "preference", None, rows, image_ids=["a", "b"])
+    patch_manifest(tmp_path, "preference")
+    ds = load(tmp_path, split="train")
+    assert type(ds).__name__ == "PreferenceDataset"
+
+
+def test_anchor_pairing_selects_anchor_dataset(tmp_path):
+    rows = anchor_rows([(["a", "b"], {"winner": 1})])
+    write_dataset(tmp_path, "preference", None, rows, image_ids=["a", "b"])
+    patch_manifest(tmp_path, "preference", pairing="anchor")
+    ds = load(tmp_path, split="train")
+    assert type(ds).__name__ == "AnchorPreferenceDataset"

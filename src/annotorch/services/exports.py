@@ -122,6 +122,10 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
                               "text": item.text, "metadata": item.metadata}
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
+        is_anchor = task.config.pairing == "anchor"
+        anchor_ids = set(task.config.anchor_item_ids or [])
+        used_anchors: list[str] = []
+
         split_counts: dict[str, int] = {}
         with open(tmp / "annotations.jsonl", "w", encoding="utf-8") as f:
             for a in rows_source:
@@ -134,27 +138,43 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
                     "annotator_id": a.annotator_id,
                     "split": split,
                 }
+                if is_anchor:
+                    anchor = next(i for i in units[a.unit_id].item_ids
+                                  if i in anchor_ids)
+                    row["anchor_item_id"] = anchor
+                    if anchor not in used_anchors:
+                        used_anchors.append(anchor)
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
         modality = modalities.pop() if len(modalities) == 1 else (
             "mixed" if modalities else "empty"
         )
+        conventions: dict[str, str] = {}
+        if task.question == QuestionType.PREFERENCE:
+            conventions["preference_winner"] = (
+                "1 = first item in item_ids wins, -1 = second, 0 = tie"
+            )
+        if is_anchor:
+            conventions["anchor_item_id"] = (
+                "the fixed reference item of the pair;"
+                " the other entry in item_ids varies"
+            )
+
         manifest = {
             "format_version": FORMAT_VERSION,
             "generator": f"annotorch {__version__}",
             "task": {"name": task.name, "presentation": task.presentation.value,
-                     "question": task.question.value},
+                     "question": task.question.value,
+                     "pairing": task.config.pairing},
             "classes": task.config.labels,
             "modality": modality,
             "aggregation": "raw",
-            "conventions": (
-                {"preference_winner":
-                 "1 = first item in item_ids wins, -1 = second, 0 = tie"}
-                if task.question == QuestionType.PREFERENCE else {}
-            ),
+            "conventions": conventions,
             "seed": seed,
             "splits": split_counts,
         }
+        if is_anchor:
+            manifest["anchors"] = used_anchors
         (tmp / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )

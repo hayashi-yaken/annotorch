@@ -22,3 +22,30 @@ class SimilarityDataset(_PairDataset):
         answer = row["answer"]
         score = float(answer["same"]) if "same" in answer else float(answer["score"])
         return self._load_pair(row), score
+
+
+class _AnchorPairDataset(_PairDataset):
+    def _load_anchor_first(self, row):
+        """アンカーを先頭にした (pair, 反転したか) を返す。"""
+        a, b = row["item_ids"]
+        if row["anchor_item_id"] == a:
+            return (self._load_obj(a), self._load_obj(b)), False
+        return (self._load_obj(b), self._load_obj(a)), True
+
+
+class AnchorPreferenceDataset(_AnchorPairDataset):
+    def __getitem__(self, index: int):
+        row = self.rows[index]
+        pair, flipped = self._load_anchor_first(row)
+        # winner: 1 = アンカーの勝ち, -1 = 相手の勝ち, 0 = tie
+        winner = row["answer"]["winner"]
+        return pair, -winner if flipped else winner
+
+
+class AnchorSimilarityDataset(_AnchorPairDataset):
+    def __getitem__(self, index: int):
+        row = self.rows[index]
+        pair, _ = self._load_anchor_first(row)
+        answer = row["answer"]
+        score = float(answer["same"]) if "same" in answer else float(answer["score"])
+        return pair, score

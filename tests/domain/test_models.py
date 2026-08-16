@@ -56,3 +56,41 @@ def test_label_task_requires_labels():
             question=QuestionType.HARD_LABEL,
             config=TaskConfig(),
         )
+
+
+def _anchor_task(presentation=Presentation.PAIR, question=QuestionType.PREFERENCE,
+                 **config):
+    return Task(project_id="p", name="a", presentation=presentation,
+                question=question, config=TaskConfig(num_units=2, **config))
+
+
+def test_anchor_task_valid():
+    task = _anchor_task(pairing="anchor", anchor_item_ids=["a"])
+    assert task.config.anchor_item_ids == ["a"]
+    assert task.config.pairing == "anchor"
+
+
+def test_pairing_defaults_to_random():
+    assert TaskConfig().pairing == "random"
+    assert TaskConfig().anchor_item_ids is None
+
+
+def test_anchor_pairing_rejects_non_pair_presentation():
+    with pytest.raises(ValidationError):
+        _anchor_task(presentation=Presentation.GROUP, question=QuestionType.RANKING,
+                     group_size=2, pairing="anchor", anchor_item_ids=["a"])
+
+
+def test_anchor_pairing_requires_anchor_ids():
+    with pytest.raises(ValidationError):
+        _anchor_task(pairing="anchor")
+
+
+def test_random_pairing_rejects_anchor_ids():
+    with pytest.raises(ValidationError):
+        _anchor_task(anchor_item_ids=["a"])
+
+
+def test_anchor_ids_must_be_unique():
+    with pytest.raises(ValidationError, match="found: .* 'a'"):
+        _anchor_task(pairing="anchor", anchor_item_ids=["a", "a"])

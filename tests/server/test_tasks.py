@@ -97,3 +97,51 @@ def test_delete_task_leaves_other_tasks_and_items(client):
 def test_delete_unknown_task_404(client):
     pid = create_project(client)
     assert client.delete(f"/api/projects/{pid}/tasks/nope").status_code == 404
+
+
+def test_create_anchor_pair_task(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 6)
+    items = client.get(f"/api/projects/{pid}/items").json()
+    res = client.post(f"/api/projects/{pid}/tasks", json={
+        "name": "anchor", "presentation": "pair", "question": "preference",
+        "config": {"num_units": 3, "pairing": "anchor",
+                   "anchor_item_ids": [items[0]["id"]]},
+    })
+    assert res.status_code == 201
+    assert res.json()["num_units"] == 3
+
+
+def test_create_anchor_task_with_too_few_items_400(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 3)
+    items = client.get(f"/api/projects/{pid}/items").json()
+    res = client.post(f"/api/projects/{pid}/tasks", json={
+        "name": "anchor", "presentation": "pair", "question": "preference",
+        "config": {"num_units": 5, "pairing": "anchor",
+                   "anchor_item_ids": [items[0]["id"]]},
+    })
+    assert res.status_code == 400
+    assert "non-anchor items" in res.json()["detail"]
+
+
+def test_create_random_pair_task_with_too_few_items_400(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 3)
+    res = client.post(f"/api/projects/{pid}/tasks", json={
+        "name": "pref", "presentation": "pair", "question": "preference",
+        "config": {"num_units": 2},
+    })
+    assert res.status_code == 400
+    assert "at least 4 items" in res.json()["detail"]
+
+
+def test_create_anchor_task_with_unknown_anchor_400(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 6)
+    res = client.post(f"/api/projects/{pid}/tasks", json={
+        "name": "anchor", "presentation": "pair", "question": "preference",
+        "config": {"num_units": 2, "pairing": "anchor",
+                   "anchor_item_ids": ["nope"]},
+    })
+    assert res.status_code == 400

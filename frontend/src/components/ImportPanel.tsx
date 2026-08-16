@@ -1,21 +1,33 @@
 import { useEffect, useState } from "react";
 import { Button, Card, FileUpload, HStack, Input, Stack, Text, useFileUpload } from "@chakra-ui/react";
 import { api } from "../api";
+import { message } from "../lib/errors";
+import { toaster } from "../lib/toaster";
 import type { ImportReport } from "../api";
 
 export default function ImportPanel({ projectId, onImported }: {
   projectId: string; onImported: () => void;
 }) {
   const [folder, setFolder] = useState("");
-  const [report, setReport] = useState<ImportReport | null>(null);
-  const [error, setError] = useState("");
 
-  const run = async (fn: () => Promise<ImportReport>) => {
-    setError("");
+  const run = async (label: string, fn: () => Promise<ImportReport>) => {
     try {
-      setReport(await fn());
+      const report = await fn();
+      const skipped = report.skipped
+        .slice(0, 3)
+        .map((s) => `\n・${s.reason}`)
+        .join("");
+      toaster.create({
+        type: report.imported > 0 ? "success" : "warning",
+        title: report.imported > 0
+          ? `${label}を ${report.imported} 件取り込みました`
+          : `${label}を取り込めませんでした`,
+        description: `スキップ ${report.skipped.length} 件${skipped}`,
+      });
       onImported();
-    } catch (e) { setError(String(e)); }
+    } catch (e) {
+      toaster.error({ title: `${label}の取り込みに失敗しました`, description: message(e) });
+    }
   };
 
   // Uses the external-store form (useFileUpload + RootProvider) instead of
@@ -42,7 +54,7 @@ export default function ImportPanel({ projectId, onImported }: {
     const files = [...imageUpload.acceptedFiles, ...imageUpload.rejectedFiles.map((r) => r.file)];
     if (!files.length) return;
     imageUpload.clearFiles();
-    run(() => api.uploadImages(projectId, files));
+    run("画像", () => api.uploadImages(projectId, files));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageUpload.acceptedFiles, imageUpload.rejectedFiles]);
 
@@ -50,7 +62,7 @@ export default function ImportPanel({ projectId, onImported }: {
     const file = [...textUpload.acceptedFiles, ...textUpload.rejectedFiles.map((r) => r.file)][0];
     if (!file) return;
     textUpload.clearFiles();
-    run(() => api.uploadTexts(projectId, file));
+    run("テキスト", () => api.uploadTexts(projectId, file));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textUpload.acceptedFiles, textUpload.rejectedFiles]);
 
@@ -90,19 +102,14 @@ export default function ImportPanel({ projectId, onImported }: {
                 onChange={(e) => setFolder(e.target.value)}
                 placeholder="Docker では /import 配下のパス"
               />
-              <Button onClick={() => folder && run(() => api.importFolder(projectId, folder))}>
+              <Button
+                onClick={() =>
+                  folder && run("フォルダ", () => api.importFolder(projectId, folder))}
+              >
                 取り込み
               </Button>
             </HStack>
           </Stack>
-
-          {report && (
-            <Text>
-              取り込み {report.imported} 件 / スキップ {report.skipped.length} 件
-              {report.skipped.slice(0, 3).map((s) => ` （${s.reason}）`).join("")}
-            </Text>
-          )}
-          {error && <Text color="red.500">{error}</Text>}
         </Stack>
       </Card.Body>
     </Card.Root>

@@ -4,8 +4,10 @@ import {
 } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Item, Presentation, QuestionType, TaskConfig } from "../api";
+import { message } from "../lib/errors";
 import { pairBudgetRange } from "../lib/pairbudget";
 import AnchorPicker from "./AnchorPicker";
+import { toaster } from "../lib/toaster";
 
 const QUESTIONS: Record<Presentation, QuestionType[]> = {
   single: ["hard_label", "soft_label"],
@@ -27,7 +29,6 @@ export default function TaskForm({ projectId, items, onCreated }: {
   const [seed, setSeed] = useState(0);
   const [pairing, setPairing] = useState<"random" | "anchor">("random");
   const [anchorIds, setAnchorIds] = useState<string[]>([]);
-  const [error, setError] = useState("");
 
   const numItems = items.length;
   const needsLabels = question === "hard_label" || question === "soft_label";
@@ -37,7 +38,6 @@ export default function TaskForm({ projectId, items, onCreated }: {
   const budgetOk = !isPair || (numUnits >= budget.min && numUnits <= budget.max);
 
   const create = async () => {
-    setError("");
     const config: TaskConfig = { seed };
     if (needsLabels) {
       config.labels = labels.split(",").map((s) => s.trim()).filter(Boolean);
@@ -50,12 +50,18 @@ export default function TaskForm({ projectId, items, onCreated }: {
       config.anchor_item_ids = anchorIds;
     }
     try {
-      await api.createTask(projectId, {
+      const created = await api.createTask(projectId, {
         name: name.trim() || `${presentation}-${question}`,
         presentation, question, config,
       });
       onCreated();
-    } catch (e) { setError(String(e)); }
+      toaster.success({
+        title: `タスク「${created.task.name}」を作成しました`,
+        description: `${created.num_units} Unit を生成しました`,
+      });
+    } catch (e) {
+      toaster.error({ title: "タスクを作成できませんでした", description: message(e) });
+    }
   };
 
   return (
@@ -204,8 +210,6 @@ export default function TaskForm({ projectId, items, onCreated }: {
               {pairing === "anchor" && `・アンカー ${anchorIds.length} 件`}）
             </Text>
           )}
-
-          {error && <Text color="red.500">{error}</Text>}
         </Stack>
       </Card.Body>
     </Card.Root>

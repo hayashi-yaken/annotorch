@@ -2,26 +2,31 @@ import { useEffect, useState } from "react";
 import { Box, Button, Card, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Layout from "../components/Layout";
+import { toaster } from "../lib/toaster";
 import { api } from "../api";
+import { message } from "../lib/errors";
 import type { Project } from "../api";
 
 export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
-  const [error, setError] = useState("");
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
 
   const refresh = () =>
-    api.listProjects().then(setProjects).catch((e) => setError(String(e)));
+    api.listProjects().then(setProjects).catch((e) =>
+      toaster.error({ title: "プロジェクト一覧を取得できませんでした", description: message(e) }));
   useEffect(() => { refresh(); }, []);
 
   const create = async () => {
     if (!name.trim()) return;
     try {
-      await api.createProject(name.trim());
+      const p = await api.createProject(name.trim());
       setName("");
       refresh();
-    } catch (e) { setError(String(e)); }
+      toaster.success({ title: `プロジェクト「${p.name}」を作成しました` });
+    } catch (e) {
+      toaster.error({ title: "プロジェクトを作成できませんでした", description: message(e) });
+    }
   };
 
   const remove = async (p: Project) => {
@@ -29,12 +34,14 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
     try {
       await api.deleteProject(p.id);
       refresh();
-    } catch (e) { setError(String(e)); }
+      toaster.success({ title: `プロジェクト「${p.name}」を削除しました` });
+    } catch (e) {
+      toaster.error({ title: "プロジェクトを削除できませんでした", description: message(e) });
+    }
   };
 
   return (
     <Layout title="annotorch">
-      {error && <Text color="red.500">{error}</Text>}
       <HStack>
         <Input
           value={name}

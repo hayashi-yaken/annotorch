@@ -8,6 +8,8 @@ import ImportPanel from "../components/ImportPanel";
 import ItemView from "../components/ItemView";
 import Layout from "../components/Layout";
 import TaskForm from "../components/TaskForm";
+import { toaster } from "../lib/toaster";
+import { message } from "../lib/errors";
 
 export default function ProjectPage({ project, onBack, onAnnotate }: {
   project: Project;
@@ -18,11 +20,12 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
   const [tasks, setTasks] = useState<TaskWithProgress[]>([]);
   const [exportTask, setExportTask] = useState<Task | null>(null);
   const [deleteTask, setDeleteTask] = useState<TaskWithProgress | null>(null);
-  const [error, setError] = useState("");
 
   const refresh = useCallback(() => {
-    api.listItems(project.id).then(setItems).catch((e) => setError(String(e)));
-    api.listTasks(project.id).then(setTasks).catch((e) => setError(String(e)));
+    api.listItems(project.id).then(setItems).catch((e) =>
+      toaster.error({ title: "アイテムを取得できませんでした", description: message(e) }));
+    api.listTasks(project.id).then(setTasks).catch((e) =>
+      toaster.error({ title: "タスクを取得できませんでした", description: message(e) }));
   }, [project.id]);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -32,7 +35,10 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
       await api.deleteTask(project.id, t.id);
       if (exportTask?.id === t.id) setExportTask(null);
       refresh();
-    } catch (e) { setError(String(e)); }
+      toaster.success({ title: `タスク「${t.name}」を削除しました` });
+    } catch (e) {
+      toaster.error({ title: "タスクを削除できませんでした", description: message(e) });
+    }
   };
 
   return (
@@ -40,7 +46,6 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
       <Button alignSelf="flex-start" variant="outline" onClick={onBack}>
         ← プロジェクト一覧
       </Button>
-      {error && <Text color="red.500">{error}</Text>}
 
       <Stack gap={3}>
         <Heading size="md">アイテム（{items.length}件）</Heading>

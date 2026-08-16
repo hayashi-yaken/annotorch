@@ -3,6 +3,8 @@ import { Button, HStack, Progress, Text } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Answer, Project, Task, UnitView } from "../api";
 import Layout from "../components/Layout";
+import { toaster } from "../lib/toaster";
+import { message } from "../lib/errors";
 import Grouping from "../components/answer/Grouping";
 import HardLabel from "../components/answer/HardLabel";
 import Preference from "../components/answer/Preference";
@@ -28,12 +30,13 @@ export default function AnnotatePage({ project, task, onBack }: {
   const save = useCallback(async (answer: Answer) => {
     if (!units) return;
     const unit = units[index];
-    setError("");
     try {
       await api.saveAnnotation(project.id, task.id, unit.id, answer);
       setUnits(units.map((u, n) => (n === index ? { ...u, answer } : u)));
       if (index < units.length - 1) setIndex(index + 1);
-    } catch (e) { setError(String(e)); }
+    } catch (e) {
+      toaster.error({ title: "回答を保存できませんでした", description: message(e) });
+    }
   }, [units, index, project.id, task.id]);
 
   if (!units) {

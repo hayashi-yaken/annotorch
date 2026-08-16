@@ -4,7 +4,9 @@ import {
 } from "@chakra-ui/react";
 import { api } from "../api";
 import type { ExportResult, Task } from "../api";
+import { message } from "../lib/errors";
 import { parseSplits } from "../lib/splits";
+import { toaster } from "../lib/toaster";
 
 export default function ExportPanel({ projectId, task, onClose }: {
   projectId: string; task: Task; onClose: () => void;
@@ -13,15 +15,20 @@ export default function ExportPanel({ projectId, task, onClose }: {
   const [splits, setSplits] = useState("");
   const [seed, setSeed] = useState(0);
   const [result, setResult] = useState<ExportResult | null>(null);
-  const [error, setError] = useState("");
 
   const run = async () => {
-    setError("");
     try {
       const parsed = splits.trim() ? parseSplits(splits) : null;
-      setResult(await api.exportTask(projectId, task.id,
-        { output_dir: outputDir.trim(), splits: parsed, seed }));
-    } catch (e) { setError(String(e)); }
+      const exported = await api.exportTask(projectId, task.id,
+        { output_dir: outputDir.trim(), splits: parsed, seed });
+      setResult(exported);
+      toaster.success({
+        title: `${exported.num_rows} 件をエクスポートしました`,
+        description: exported.output_dir,
+      });
+    } catch (e) {
+      toaster.error({ title: "エクスポートに失敗しました", description: message(e) });
+    }
   };
 
   return (
@@ -60,8 +67,6 @@ export default function ExportPanel({ projectId, task, onClose }: {
             <Button onClick={run} disabled={!outputDir.trim()}>データセット作成</Button>
             <Button variant="outline" onClick={onClose}>閉じる</Button>
           </HStack>
-
-          {error && <Text color="red.500">{error}</Text>}
 
           {result && (
             <Box>

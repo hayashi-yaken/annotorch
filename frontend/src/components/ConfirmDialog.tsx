@@ -5,6 +5,7 @@ export default function ConfirmDialog({
   title,
   message,
   confirmLabel = "削除",
+  loading = false,
   onConfirm,
   onCancel,
 }: {
@@ -12,6 +13,7 @@ export default function ConfirmDialog({
   title: string;
   message: string;
   confirmLabel?: string;
+  loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -20,6 +22,8 @@ export default function ConfirmDialog({
       role="alertdialog"
       placement="center"
       open={open}
+      closeOnInteractOutside={!loading}
+      closeOnEscape={!loading}
       onOpenChange={(e) => !e.open && onCancel()}
     >
       <Portal>
@@ -33,8 +37,12 @@ export default function ConfirmDialog({
               <Text whiteSpace="pre-line">{message}</Text>
             </Dialog.Body>
             <Dialog.Footer>
-              <Button variant="outline" onClick={onCancel}>キャンセル</Button>
-              <Button colorPalette="red" onClick={onConfirm}>{confirmLabel}</Button>
+              <Button variant="outline" disabled={loading} onClick={onCancel}>
+                キャンセル
+              </Button>
+              <Button colorPalette="red" loading={loading} onClick={onConfirm}>
+                {confirmLabel}
+              </Button>
             </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Positioner>

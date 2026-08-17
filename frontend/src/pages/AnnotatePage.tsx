@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, HStack, Progress, Text } from "@chakra-ui/react";
+import { Button, HStack, Progress, Spinner, Text } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Answer, Project, Task, UnitView } from "../api";
 import Layout from "../components/Layout";
+import Loader from "../components/Loader";
+import { toaster } from "../lib/toaster";
+import { message } from "../lib/errors";
 import Grouping from "../components/answer/Grouping";
 import HardLabel from "../components/answer/HardLabel";
 import Preference from "../components/answer/Preference";
@@ -15,6 +18,7 @@ export default function AnnotatePage({ project, task, onBack }: {
 }) {
   const [units, setUnits] = useState<UnitView[] | null>(null);
   const [index, setIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -28,12 +32,16 @@ export default function AnnotatePage({ project, task, onBack }: {
   const save = useCallback(async (answer: Answer) => {
     if (!units) return;
     const unit = units[index];
-    setError("");
+    setSaving(true);
     try {
       await api.saveAnnotation(project.id, task.id, unit.id, answer);
       setUnits(units.map((u, n) => (n === index ? { ...u, answer } : u)));
       if (index < units.length - 1) setIndex(index + 1);
-    } catch (e) { setError(String(e)); }
+    } catch (e) {
+      toaster.error({ title: "回答を保存できませんでした", description: message(e) });
+    } finally {
+      setSaving(false);
+    }
   }, [units, index, project.id, task.id]);
 
   if (!units) {
@@ -45,7 +53,7 @@ export default function AnnotatePage({ project, task, onBack }: {
             <Text color="red.500">{error}</Text>
           </>
         ) : (
-          <Text>読み込み中…</Text>
+          <Loader />
         )}
       </Layout>
     );
@@ -68,6 +76,7 @@ export default function AnnotatePage({ project, task, onBack }: {
       <HStack justify="space-between" wrap="wrap" gap={3}>
         <Button variant="outline" onClick={onBack}>← 戻る</Button>
         <HStack gap={3}>
+          {saving && <Spinner size="sm" color="blue.solid" />}
           <Text color="fg.muted">{index + 1} / {units.length}（回答済み {answered}）</Text>
           <Button size="sm" onClick={() => setIndex(Math.max(0, index - 1))}>前へ</Button>
           <Button size="sm" onClick={() => setIndex(Math.min(units.length - 1, index + 1))}>
@@ -80,7 +89,6 @@ export default function AnnotatePage({ project, task, onBack }: {
           <Progress.Range />
         </Progress.Track>
       </Progress.Root>
-      {error && <Text color="red.500">{error}</Text>}
       {task.question === "hard_label" && <HardLabel key={unit.id} {...editorProps} />}
       {task.question === "soft_label" && <SoftLabel key={unit.id} {...editorProps} />}
       {task.question === "preference" && <Preference key={unit.id} {...editorProps} />}

@@ -89,7 +89,6 @@ export default function AnnotatePage({ project, task, onBack }: {
           <Progress.Range />
         </Progress.Track>
       </Progress.Root>
-      {error && <Text color="red.500">{error}</Text>}
       {task.question === "hard_label" && <HardLabel key={unit.id} {...editorProps} />}
       {task.question === "soft_label" && <SoftLabel key={unit.id} {...editorProps} />}
       {task.question === "preference" && <Preference key={unit.id} {...editorProps} />}

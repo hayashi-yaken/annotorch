@@ -4,11 +4,12 @@ import { api } from "../api";
 import type { Item } from "../api";
 import { message } from "../lib/errors";
 import { toaster } from "../lib/toaster";
+import { pageSlice } from "../lib/pagination";
 import { useAsync } from "../lib/useAsync";
 import ConfirmDialog from "./ConfirmDialog";
 import ItemView from "./ItemView";
 
-const VISIBLE_LIMIT = 50;
+const PAGE_SIZE = 50;
 
 /** アイテムのサムネイル一覧と、選択したアイテムの削除。 */
 export default function ItemGrid({ projectId, items, onChanged }: {
@@ -16,9 +17,11 @@ export default function ItemGrid({ projectId, items, onChanged }: {
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
+  const [requestedPage, setRequestedPage] = useState(0);
 
-  const visible = items.slice(0, VISIBLE_LIMIT);
-  const targets = selected.filter((id) => visible.some((i) => i.id === id));
+  const { page, pageCount, start, end } = pageSlice(items.length, requestedPage, PAGE_SIZE);
+  const visible = items.slice(start, end);
+  const targets = selected.filter((id) => items.some((i) => i.id === id));
 
   const toggle = (id: string) =>
     setSelected((prev) =>
@@ -72,8 +75,20 @@ export default function ItemGrid({ projectId, items, onChanged }: {
         ))}
       </SimpleGrid>
 
-      {items.length > VISIBLE_LIMIT && (
-        <Text color="gray.500">…他 {items.length - VISIBLE_LIMIT} 件</Text>
+      {pageCount > 1 && (
+        <HStack justify="center">
+          <Button size="sm" variant="outline" disabled={page === 0}
+                  onClick={() => setRequestedPage(page - 1)}>
+            前へ
+          </Button>
+          <Text color="gray.500">
+            {start + 1}〜{end} 件目（全 {items.length} 件）
+          </Text>
+          <Button size="sm" variant="outline" disabled={page === pageCount - 1}
+                  onClick={() => setRequestedPage(page + 1)}>
+            次へ
+          </Button>
+        </HStack>
       )}
 
       <ConfirmDialog

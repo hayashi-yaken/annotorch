@@ -148,7 +148,7 @@ class SqliteStore:
             for r in rows
         ]
 
-    def delete_items(self, item_ids: list[str]) -> None:
+    def delete_items(self, item_ids: list[str]) -> int:
         placeholders = ",".join("?" * len(item_ids))
         known = {
             r["id"]
@@ -179,9 +179,10 @@ class SqliteStore:
             raise ItemsInUseError([i for i in item_ids if i in blocked], task_names)
 
         with self.conn:
-            self.conn.executemany(
-                "DELETE FROM items WHERE id = ?", [(i,) for i in item_ids]
+            cur = self.conn.execute(
+                f"DELETE FROM items WHERE id IN ({placeholders})", item_ids
             )
+        return cur.rowcount
 
     # -- tasks --------------------------------------------------------------
 

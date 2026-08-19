@@ -183,3 +183,14 @@ def test_delete_items_with_empty_list_is_a_noop(db_path):
     st.delete_items([])
 
     assert [i.id for i in st.list_items(project.id)] == [item.id]
+
+
+def test_delete_items_counts_each_item_once(db_path):
+    st = SqliteStore(db_path)
+    project = Project(name="demo")
+    st.add_project(project)
+    item = Item(project_id=project.id, modality=Modality.IMAGE, path="a.png")
+    st.add_items([item])
+
+    assert st.delete_items([item.id, item.id]) == 1
+    assert st.list_items(project.id) == []

@@ -109,3 +109,15 @@ def test_delete_item_used_by_a_task_409(client):
     assert res.status_code == 409
     assert "cls" in res.json()["detail"]
     assert len(client.get(f"/api/projects/{pid}/items").json()) == 2
+
+
+def test_delete_items_reports_how_many_were_actually_deleted(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 1)
+    item = client.get(f"/api/projects/{pid}/items").json()[0]
+
+    res = client.request("DELETE", f"/api/projects/{pid}/items",
+                         json={"item_ids": [item["id"], item["id"]]})
+
+    assert res.status_code == 200
+    assert res.json() == {"deleted": 1}

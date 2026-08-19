@@ -21,8 +21,7 @@ def list_items(pid: str, svc: ProjectService = Depends(project_service)):
 @router.delete("/projects/{pid}/items")
 def delete_items(pid: str, body: ItemsDelete,
                  svc: ProjectService = Depends(project_service)):
-    svc.delete_items(pid, body.item_ids)
-    return {"deleted": len(body.item_ids)}
+    return {"deleted": svc.delete_items(pid, body.item_ids)}
 
 
 @router.post("/projects/{pid}/items/upload")

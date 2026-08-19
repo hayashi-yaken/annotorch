@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .. import __version__
+from ..domain.models import ItemsInUseError
 from ..services.exports import ExportService
 from ..services.projects import ProjectService
 from ..services.tasks import TaskService
@@ -39,6 +40,10 @@ def create_app(root: Path | str) -> FastAPI:
     @app.exception_handler(ValueError)  # AnswerValidationError も ValueError
     async def _bad_request(request: Request, exc: ValueError):
         return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+    @app.exception_handler(ItemsInUseError)
+    async def _items_in_use(request: Request, exc: ItemsInUseError):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
 
     @app.exception_handler(FileExistsError)
     async def _conflict(request: Request, exc: FileExistsError):

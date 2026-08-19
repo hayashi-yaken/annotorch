@@ -1,6 +1,6 @@
 import json
 
-from .conftest import create_project, make_png_bytes
+from .conftest import create_project, make_png_bytes, upload_pngs
 
 
 def test_upload_images_and_list(client):
@@ -71,3 +71,53 @@ def test_import_folder_bad_path_400(client):
     res = client.post(f"/api/projects/{pid}/items/import-folder",
                       json={"path": "/no/such/dir"})
     assert res.status_code == 400
+
+
+def test_delete_items(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 3)
+    items = client.get(f"/api/projects/{pid}/items").json()
+
+    res = client.request("DELETE", f"/api/projects/{pid}/items",
+                         json={"item_ids": [items[0]["id"], items[2]["id"]]})
+
+    assert res.status_code == 200
+    assert res.json() == {"deleted": 2}
+    remaining = client.get(f"/api/projects/{pid}/items").json()
+    assert [i["id"] for i in remaining] == [items[1]["id"]]
+
+
+def test_delete_unknown_item_404(client):
+    pid = create_project(client)
+    res = client.request("DELETE", f"/api/projects/{pid}/items",
+                         json={"item_ids": ["nope"]})
+    assert res.status_code == 404
+
+
+def test_delete_item_used_by_a_task_409(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 2)
+    items = client.get(f"/api/projects/{pid}/items").json()
+    client.post(f"/api/projects/{pid}/tasks", json={
+        "name": "cls", "presentation": "single", "question": "hard_label",
+        "config": {"labels": ["cat", "dog"]},
+    })
+
+    res = client.request("DELETE", f"/api/projects/{pid}/items",
+                         json={"item_ids": [items[0]["id"]]})
+
+    assert res.status_code == 409
+    assert "cls" in res.json()["detail"]
+    assert len(client.get(f"/api/projects/{pid}/items").json()) == 2
+
+
+def test_delete_items_reports_how_many_were_actually_deleted(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 1)
+    item = client.get(f"/api/projects/{pid}/items").json()[0]
+
+    res = client.request("DELETE", f"/api/projects/{pid}/items",
+                         json={"item_ids": [item["id"], item["id"]]})
+
+    assert res.status_code == 200
+    assert res.json() == {"deleted": 1}

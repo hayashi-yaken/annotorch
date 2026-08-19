@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Heading, HStack, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Button, Card, Heading, HStack, Progress, Stack, Text } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Item, Project, Task, TaskWithProgress } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
 import ExportPanel from "../components/ExportPanel";
 import ImportPanel from "../components/ImportPanel";
-import ItemView from "../components/ItemView";
+import ItemGrid from "../components/ItemGrid";
 import Layout from "../components/Layout";
 import Loader from "../components/Loader";
 import TaskForm from "../components/TaskForm";
@@ -63,12 +63,7 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
       <Stack gap={3} hidden={!ready}>
         <Heading size="md">アイテム（{items.length}件）</Heading>
         <ImportPanel projectId={project.id} onImported={refresh} />
-        <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} gap={3}>
-          {items.slice(0, 50).map((item) => (
-            <ItemView key={item.id} projectId={project.id} item={item} />
-          ))}
-        </SimpleGrid>
-        {items.length > 50 && <Text color="gray.500">…他 {items.length - 50} 件</Text>}
+        <ItemGrid projectId={project.id} items={items} onChanged={refresh} />
       </Stack>
 
       <Stack gap={3} hidden={!ready}>

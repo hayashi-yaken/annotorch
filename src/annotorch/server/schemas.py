@@ -16,6 +16,10 @@ class FolderImport(BaseModel):
     path: str
 
 
+class ItemsDelete(BaseModel):
+    item_ids: list[str]
+
+
 class TaskCreate(BaseModel):
     name: str
     presentation: Presentation

@@ -2,6 +2,7 @@ import pytest
 
 from annotorch.domain.models import (
     Annotation,
+    ItemsInUseError,
     Item,
     Modality,
     Presentation,
@@ -125,3 +126,71 @@ def test_open_rejects_mismatched_schema_version(db_path):
 
     with pytest.raises(RuntimeError, match="schema_version"):
         SqliteStore(db_path)
+
+
+def test_delete_items_removes_only_the_given_rows(db_path):
+    st = SqliteStore(db_path)
+    project = Project(name="demo")
+    st.add_project(project)
+    items = [Item(project_id=project.id, modality=Modality.IMAGE, path=f"{n}.png")
+             for n in range(3)]
+    st.add_items(items)
+
+    st.delete_items([items[0].id, items[2].id])
+
+    assert [i.id for i in st.list_items(project.id)] == [items[1].id]
+
+
+def test_delete_items_rejects_unknown_id_without_deleting_anything(db_path):
+    st = SqliteStore(db_path)
+    project = Project(name="demo")
+    st.add_project(project)
+    item = Item(project_id=project.id, modality=Modality.IMAGE, path="a.png")
+    st.add_items([item])
+
+    with pytest.raises(LookupError):
+        st.delete_items([item.id, "nope"])
+
+    assert [i.id for i in st.list_items(project.id)] == [item.id]
+
+
+def test_delete_items_rejects_items_used_by_a_task(db_path):
+    st = SqliteStore(db_path)
+    project = Project(name="demo")
+    st.add_project(project)
+    items = [Item(project_id=project.id, modality=Modality.IMAGE, path=f"{n}.png")
+             for n in range(2)]
+    st.add_items(items)
+    task = make_task(project.id)
+    st.add_task(task)
+    st.add_units([Unit(task_id=task.id, item_ids=[items[0].id], position=0)])
+
+    with pytest.raises(ItemsInUseError) as excinfo:
+        st.delete_items([items[0].id, items[1].id])
+
+    assert excinfo.value.item_ids == [items[0].id]
+    assert task.name in str(excinfo.value)
+    assert len(st.list_items(project.id)) == 2
+
+
+def test_delete_items_with_empty_list_is_a_noop(db_path):
+    st = SqliteStore(db_path)
+    project = Project(name="demo")
+    st.add_project(project)
+    item = Item(project_id=project.id, modality=Modality.IMAGE, path="a.png")
+    st.add_items([item])
+
+    st.delete_items([])
+
+    assert [i.id for i in st.list_items(project.id)] == [item.id]
+
+
+def test_delete_items_counts_each_item_once(db_path):
+    st = SqliteStore(db_path)
+    project = Project(name="demo")
+    st.add_project(project)
+    item = Item(project_id=project.id, modality=Modality.IMAGE, path="a.png")
+    st.add_items([item])
+
+    assert st.delete_items([item.id, item.id]) == 1
+    assert st.list_items(project.id) == []

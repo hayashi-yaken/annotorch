@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from ...services.projects import ProjectService
-from ..schemas import FolderImport
+from ..schemas import FolderImport, ItemsDelete
 from .deps import project_service
 
 router = APIRouter()
@@ -16,6 +16,12 @@ router = APIRouter()
 @router.get("/projects/{pid}/items")
 def list_items(pid: str, svc: ProjectService = Depends(project_service)):
     return svc.list_items(pid)
+
+
+@router.delete("/projects/{pid}/items")
+def delete_items(pid: str, body: ItemsDelete,
+                 svc: ProjectService = Depends(project_service)):
+    return {"deleted": svc.delete_items(pid, body.item_ids)}
 
 
 @router.post("/projects/{pid}/items/upload")

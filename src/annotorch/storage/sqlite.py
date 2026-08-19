@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ..domain.models import (
     Annotation,
+    ItemsInUseError,
     Annotator,
     Item,
     Modality,
@@ -146,6 +147,42 @@ class SqliteStore:
             )
             for r in rows
         ]
+
+    def delete_items(self, item_ids: list[str]) -> int:
+        placeholders = ",".join("?" * len(item_ids))
+        known = {
+            r["id"]
+            for r in self.conn.execute(
+                f"SELECT id FROM items WHERE id IN ({placeholders})", item_ids
+            )
+        }
+        missing = [i for i in item_ids if i not in known]
+        if missing:
+            raise LookupError(f"no such items: {', '.join(missing)}")
+
+        # units.item_ids は JSON テキストで items への外部キーがないため、
+        # 参照の有無は自前で確認する。
+        requested = set(item_ids)
+        blocked: set[str] = set()
+        task_names: list[str] = []
+        for row in self.conn.execute(
+            "SELECT t.name AS task_name, u.item_ids AS item_ids"
+            " FROM units u JOIN tasks t ON t.id = u.task_id"
+        ):
+            used = requested.intersection(json.loads(row["item_ids"]))
+            if not used:
+                continue
+            blocked |= used
+            if row["task_name"] not in task_names:
+                task_names.append(row["task_name"])
+        if blocked:
+            raise ItemsInUseError([i for i in item_ids if i in blocked], task_names)
+
+        with self.conn:
+            cur = self.conn.execute(
+                f"DELETE FROM items WHERE id IN ({placeholders})", item_ids
+            )
+        return cur.rowcount
 
     # -- tasks --------------------------------------------------------------
 

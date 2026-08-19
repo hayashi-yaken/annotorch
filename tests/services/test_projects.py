@@ -3,7 +3,15 @@ import json
 import pytest
 from PIL import Image
 
-from annotorch.domain.models import Modality
+from annotorch.domain.models import (
+    ItemsInUseError,
+    Modality,
+    Presentation,
+    QuestionType,
+    Task,
+    TaskConfig,
+    Unit,
+)
 from annotorch.services.projects import ProjectService
 from annotorch.storage.workspace import Workspace
 
@@ -113,3 +121,42 @@ def test_import_texts_csv_short_row_skipped(svc, tmp_path):
     assert "text" in report.skipped[0].reason
     items = svc.list_items(project.id)
     assert [i.text for i in items] == ["hello", "world"]
+
+
+def test_delete_items_removes_the_files_from_disk(svc, tmp_path):
+    project = svc.create("demo")
+    src = tmp_path / "src"
+    src.mkdir()
+    make_png(src / "a.png")
+    make_png(src / "b.png", (0, 255, 0))
+    svc.import_images(project.id, src)
+    items = svc.list_items(project.id)
+    items_dir = svc.ws.items_dir(project.id)
+
+    svc.delete_items(project.id, [items[0].id])
+
+    assert [i.id for i in svc.list_items(project.id)] == [items[1].id]
+    assert not (items_dir / items[0].path).exists()
+    assert (items_dir / items[1].path).exists()
+
+
+def test_delete_items_keeps_files_when_an_item_is_in_use(svc, tmp_path):
+    project = svc.create("demo")
+    src = tmp_path / "src"
+    src.mkdir()
+    make_png(src / "a.png")
+    svc.import_images(project.id, src)
+    item = svc.list_items(project.id)[0]
+    with svc.ws.open(project.id) as store:
+        task = Task(project_id=project.id, name="classify",
+                    presentation=Presentation.SINGLE,
+                    question=QuestionType.HARD_LABEL,
+                    config=TaskConfig(labels=["cat"]))
+        store.add_task(task)
+        store.add_units([Unit(task_id=task.id, item_ids=[item.id], position=0)])
+
+    with pytest.raises(ItemsInUseError):
+        svc.delete_items(project.id, [item.id])
+
+    assert (svc.ws.items_dir(project.id) / item.path).exists()
+    assert len(svc.list_items(project.id)) == 1

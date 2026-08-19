@@ -17,6 +17,18 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class ItemsInUseError(Exception):
+    """タスクの unit から参照されているアイテムを削除しようとした。"""
+
+    def __init__(self, item_ids: list[str], task_names: list[str]):
+        self.item_ids = item_ids
+        self.task_names = task_names
+        super().__init__(
+            f"{len(item_ids)} item(s) are still used by task(s): "
+            + ", ".join(task_names)
+        )
+
+
 class Modality(StrEnum):
     IMAGE = "image"
     TEXT = "text"

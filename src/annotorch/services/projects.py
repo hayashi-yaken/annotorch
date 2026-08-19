@@ -50,6 +50,17 @@ class ProjectService:
             raise LookupError(f"no file for item {item_id}")
         return self.ws.items_dir(project_id) / match[0].path
 
+    def delete_items(self, project_id: str, item_ids: list[str]) -> int:
+        """アイテムを削除し、削除した件数を返す。 参照中のものが混じっていれば何も削除しない。"""
+        with self.ws.open(project_id) as store:
+            paths = [i.path for i in store.list_items(project_id)
+                     if i.id in set(item_ids) and i.path is not None]
+            deleted = store.delete_items(item_ids)
+        items_dir = self.ws.items_dir(project_id)
+        for path in paths:
+            (items_dir / path).unlink(missing_ok=True)
+        return deleted
+
     def import_images(self, project_id: str, source_dir: Path) -> ImportReport:
         report = ImportReport()
         items: list[Item] = []

@@ -79,6 +79,9 @@ export const api = {
   importFolder: (pid: string, path: string) =>
     req<ImportReport>(`/projects/${pid}/items/import-folder`,
       json("POST", { path })),
+  deleteItems: (pid: string, itemIds: string[]) =>
+    req<{ deleted: number }>(`/projects/${pid}/items`,
+      json("DELETE", { item_ids: itemIds })),
   itemFileUrl: (pid: string, itemId: string) =>
     `${BASE}/projects/${pid}/items/${itemId}/file`,
 

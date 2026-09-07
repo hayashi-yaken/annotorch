@@ -6,6 +6,7 @@ services:
     volumes:
       - annotorch-data:/data
       - ./import:/import:ro
+      - ./export:/export
 
 volumes:
   annotorch-data:

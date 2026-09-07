@@ -10,3 +10,4 @@ src/annotorch/server/static/
 docs/superpowers/
 .superpowers/
 CLAUDE.md
+export/

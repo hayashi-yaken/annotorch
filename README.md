@@ -14,6 +14,7 @@ docker compose up --build
 作業データは volume `annotorch-data` に永続化される。
 フォルダ取り込みを使う場合はホストの `./import` に画像を置き、
 UI で `/import` を指定する。
+エクスポート先に `/export` 配下を指定すると、ホストの `./export` に出力される。
 
 ## 起動（Docker なし・開発用）
 

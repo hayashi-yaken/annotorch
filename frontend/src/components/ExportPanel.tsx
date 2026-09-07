@@ -44,7 +44,7 @@ export default function ExportPanel({ projectId, task, onClose }: {
               <Input
                 value={outputDir}
                 onChange={(e) => setOutputDir(e.target.value)}
-                placeholder="出力先ディレクトリ（Docker では /data/exports/... 推奨）"
+                placeholder="出力先ディレクトリ（Docker では /export 配下のパス）"
               />
             </Field.Root>
             <Field.Root width="16rem">

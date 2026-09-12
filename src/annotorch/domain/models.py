@@ -43,6 +43,7 @@ class Presentation(StrEnum):
 class QuestionType(StrEnum):
     HARD_LABEL = "hard_label"
     SOFT_LABEL = "soft_label"
+    CONFIDENCE = "confidence"
     PREFERENCE = "preference"
     SIMILARITY = "similarity"
     RANKING = "ranking"
@@ -50,7 +51,11 @@ class QuestionType(StrEnum):
 
 
 VALID_QUESTIONS: dict[Presentation, set[QuestionType]] = {
-    Presentation.SINGLE: {QuestionType.HARD_LABEL, QuestionType.SOFT_LABEL},
+    Presentation.SINGLE: {
+        QuestionType.HARD_LABEL,
+        QuestionType.SOFT_LABEL,
+        QuestionType.CONFIDENCE,
+    },
     Presentation.PAIR: {QuestionType.PREFERENCE, QuestionType.SIMILARITY},
     Presentation.GROUP: {QuestionType.RANKING, QuestionType.GROUPING},
 }

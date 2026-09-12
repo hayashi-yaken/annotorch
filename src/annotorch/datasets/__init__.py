@@ -19,6 +19,8 @@ def load(root: Path | str, split: str = "train",
         from .classification import HardLabelDataset as cls
     elif question == "soft_label":
         from .classification import SoftLabelDataset as cls
+    elif question == "confidence":
+        from .confidence import ConfidenceDataset as cls
     elif question == "preference":
         if anchored:
             from .pair import AnchorPreferenceDataset as cls

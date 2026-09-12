@@ -94,3 +94,15 @@ def test_random_pairing_rejects_anchor_ids():
 def test_anchor_ids_must_be_unique():
     with pytest.raises(ValidationError, match="found: .* 'a'"):
         _anchor_task(pairing="anchor", anchor_item_ids=["a", "a"])
+
+
+def test_confidence_task_needs_no_labels():
+    task = Task(project_id="p", name="quality", presentation=Presentation.SINGLE,
+                question=QuestionType.CONFIDENCE)
+    assert task.question == QuestionType.CONFIDENCE
+
+
+def test_confidence_task_rejects_pair_presentation():
+    with pytest.raises(ValidationError):
+        Task(project_id="p", name="quality", presentation=Presentation.PAIR,
+             question=QuestionType.CONFIDENCE)

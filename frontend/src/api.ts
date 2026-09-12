@@ -1,7 +1,7 @@
 export type Modality = "image" | "text";
 export type Presentation = "single" | "pair" | "group";
 export type QuestionType =
-  | "hard_label" | "soft_label" | "preference"
+  | "hard_label" | "soft_label" | "confidence" | "preference"
   | "similarity" | "ranking" | "grouping";
 
 export interface Project {

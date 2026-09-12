@@ -8,6 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from .. import __version__
+from ..domain.answers import is_skipped
 from ..domain.models import QuestionType
 from ..storage.repository import ProjectStore
 from ..storage.workspace import Workspace
@@ -79,7 +80,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
     rows_source = []
     answered_unit_ids: list[str] = []
     for a in annotations:
-        if task.question == QuestionType.PREFERENCE and a.answer.get("winner") is None:
+        if is_skipped(task.question, a.answer):
             num_skipped += 1
             continue
         rows_source.append(a)
@@ -154,6 +155,8 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
             conventions["preference_winner"] = (
                 "1 = first item in item_ids wins, -1 = second, 0 = tie"
             )
+        if task.question == QuestionType.CONFIDENCE:
+            conventions["confidence_score"] = "0 = lowest, 1 = highest"
         if is_anchor:
             conventions["anchor_item_id"] = (
                 "the fixed reference item of the pair;"

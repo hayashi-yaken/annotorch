@@ -11,7 +11,7 @@ import { toaster } from "../lib/toaster";
 import { useAsync } from "../lib/useAsync";
 
 const QUESTIONS: Record<Presentation, QuestionType[]> = {
-  single: ["hard_label", "soft_label"],
+  single: ["hard_label", "soft_label", "confidence"],
   pair: ["preference", "similarity"],
   group: ["ranking", "grouping"],
 };

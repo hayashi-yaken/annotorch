@@ -6,6 +6,7 @@ import Layout from "../components/Layout";
 import Loader from "../components/Loader";
 import { toaster } from "../lib/toaster";
 import { message } from "../lib/errors";
+import Confidence from "../components/answer/Confidence";
 import Grouping from "../components/answer/Grouping";
 import HardLabel from "../components/answer/HardLabel";
 import Preference from "../components/answer/Preference";
@@ -91,6 +92,7 @@ export default function AnnotatePage({ project, task, onBack }: {
       </Progress.Root>
       {task.question === "hard_label" && <HardLabel key={unit.id} {...editorProps} />}
       {task.question === "soft_label" && <SoftLabel key={unit.id} {...editorProps} />}
+      {task.question === "confidence" && <Confidence key={unit.id} {...editorProps} />}
       {task.question === "preference" && <Preference key={unit.id} {...editorProps} />}
       {task.question === "similarity" && <Similarity key={unit.id} {...editorProps} />}
       {task.question === "ranking" && <Ranking key={unit.id} {...editorProps} />}

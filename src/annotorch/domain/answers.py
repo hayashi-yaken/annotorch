@@ -21,6 +21,11 @@ class SoftLabelAnswer(BaseModel):
     dist: dict[str, float]
 
 
+class ConfidenceAnswer(BaseModel):
+    # None = skip（判断できなかったことを記録する）
+    score: float | None = None
+
+
 class PreferenceAnswer(BaseModel):
     # 1 = unit.item_ids の1番目の勝ち, -1 = 2番目の勝ち, 0 = tie, None = skip
     winner: Literal[1, -1, 0] | None
@@ -37,6 +42,19 @@ class RankingAnswer(BaseModel):
 
 class GroupingAnswer(BaseModel):
     groups: list[list[str]]
+
+
+# スキップを表せる質問タイプと、None がスキップを意味するキー。
+SKIP_KEYS: dict[QuestionType, str] = {
+    QuestionType.PREFERENCE: "winner",
+    QuestionType.CONFIDENCE: "score",
+}
+
+
+def is_skipped(question: QuestionType, answer: dict[str, Any]) -> bool:
+    """回答が「判断できなかった」として記録されたものか。"""
+    key = SKIP_KEYS.get(question)
+    return key is not None and answer.get(key) is None
 
 
 def _parse(model_cls: type[BaseModel], answer: dict[str, Any]) -> BaseModel:
@@ -68,6 +86,14 @@ def validate_answer(task: Task, unit: Unit, answer: dict[str, Any]) -> dict[str,
         if abs(total - 1.0) > SUM_TOLERANCE:
             raise AnswerValidationError(f"dist must sum to 1 (got {total})")
         return {"dist": {k: v / total for k, v in parsed.dist.items()}}
+
+    if q == QuestionType.CONFIDENCE:
+        parsed = _parse(ConfidenceAnswer, answer)
+        if parsed.score is not None and not 0 <= parsed.score <= 1:
+            raise AnswerValidationError(
+                f"score must be between 0 and 1 (got {parsed.score})"
+            )
+        return {"score": parsed.score}
 
     if q == QuestionType.PREFERENCE:
         parsed = _parse(PreferenceAnswer, answer)

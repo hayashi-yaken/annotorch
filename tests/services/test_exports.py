@@ -190,3 +190,50 @@ def test_export_anchors_exclude_unanswered_anchors(tmp_path):
     answered_anchor = next(i.id for i in units[0].items if i.id in ids[:2])
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["anchors"] == [answered_anchor]
+
+
+def test_confidence_skips_are_counted_and_excluded(tmp_path):
+    ws = Workspace(tmp_path / "root")
+    projects, tasks, exports = ProjectService(ws), TaskService(ws), ExportService(ws)
+    project = projects.create("demo")
+    src = tmp_path / "src"
+    src.mkdir()
+    for n in range(3):
+        Image.new("RGB", (8, 8), (n * 40, 0, 0)).save(src / f"{n}.png")
+    projects.import_images(project.id, src)
+    task, _ = tasks.create_task(project.id, "quality", Presentation.SINGLE,
+                                QuestionType.CONFIDENCE, TaskConfig())
+    units = tasks.list_units(project.id, task.id)
+    tasks.save_answer(project.id, task.id, units[0].id, {"score": 0.8})
+    tasks.save_answer(project.id, task.id, units[1].id, {"score": None})
+
+    result = exports.export(project.id, task.id, tmp_path / "ds")
+
+    assert result.num_rows == 1
+    assert result.num_skipped == 1
+    rows = read_jsonl(tmp_path / "ds" / "annotations.jsonl")
+    assert [r["answer"] for r in rows] == [{"score": 0.8}]
+
+    manifest = json.loads((tmp_path / "ds" / "manifest.json").read_text())
+    assert manifest["task"]["question"] == "confidence"
+    assert "confidence_score" in manifest["conventions"]
+
+
+def test_confidence_conventions_use_end_labels(tmp_path):
+    ws = Workspace(tmp_path / "root")
+    projects, tasks, exports = ProjectService(ws), TaskService(ws), ExportService(ws)
+    project = projects.create("demo")
+    src = tmp_path / "src"
+    src.mkdir()
+    Image.new("RGB", (8, 8)).save(src / "0.png")
+    projects.import_images(project.id, src)
+    task, _ = tasks.create_task(project.id, "bird", Presentation.SINGLE,
+                                QuestionType.CONFIDENCE,
+                                TaskConfig(labels=["swan", "duck"]))
+    unit = tasks.list_units(project.id, task.id)[0]
+    tasks.save_answer(project.id, task.id, unit.id, {"score": 0.3})
+
+    exports.export(project.id, task.id, tmp_path / "ds")
+
+    manifest = json.loads((tmp_path / "ds" / "manifest.json").read_text())
+    assert manifest["conventions"]["confidence_score"] == "0 = swan, 1 = duck"

@@ -56,3 +56,38 @@ def test_save_annotation_unknown_unit_404(client):
         f"/api/projects/{pid}/tasks/{task['id']}/units/nope/annotation",
         json={"answer": {"label": "cat"}})
     assert res.status_code == 404
+
+
+def test_confidence_task_saves_a_score_and_a_skip(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 2)
+    task = client.post(f"/api/projects/{pid}/tasks", json={
+        "name": "quality", "presentation": "single", "question": "confidence",
+        "config": {},
+    }).json()["task"]
+    units = client.get(f"/api/projects/{pid}/tasks/{task['id']}/units").json()
+
+    base = f"/api/projects/{pid}/tasks/{task['id']}/units"
+    assert client.put(f"{base}/{units[0]['id']}/annotation",
+                      json={"answer": {"score": 0.8}}).status_code == 200
+    assert client.put(f"{base}/{units[1]['id']}/annotation",
+                      json={"answer": {"score": None}}).status_code == 200
+
+    saved = client.get(f"/api/projects/{pid}/tasks/{task['id']}/units").json()
+    assert [u["answer"] for u in saved] == [{"score": 0.8}, {"score": None}]
+
+
+def test_confidence_rejects_a_score_out_of_range(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 1)
+    task = client.post(f"/api/projects/{pid}/tasks", json={
+        "name": "quality", "presentation": "single", "question": "confidence",
+        "config": {},
+    }).json()["task"]
+    unit = client.get(f"/api/projects/{pid}/tasks/{task['id']}/units").json()[0]
+
+    res = client.put(
+        f"/api/projects/{pid}/tasks/{task['id']}/units/{unit['id']}/annotation",
+        json={"answer": {"score": 1.5}})
+
+    assert res.status_code == 400

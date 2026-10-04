@@ -94,3 +94,29 @@ def test_random_pairing_rejects_anchor_ids():
 def test_anchor_ids_must_be_unique():
     with pytest.raises(ValidationError, match="found: .* 'a'"):
         _anchor_task(pairing="anchor", anchor_item_ids=["a", "a"])
+
+
+def test_confidence_task_needs_no_labels():
+    task = Task(project_id="p", name="quality", presentation=Presentation.SINGLE,
+                question=QuestionType.CONFIDENCE)
+    assert task.question == QuestionType.CONFIDENCE
+
+
+def test_confidence_task_accepts_two_end_labels():
+    task = Task(project_id="p", name="bird", presentation=Presentation.SINGLE,
+                question=QuestionType.CONFIDENCE,
+                config=TaskConfig(labels=["swan", "duck"]))
+    assert task.config.labels == ["swan", "duck"]
+
+
+@pytest.mark.parametrize("labels", [["swan"], ["swan", "duck", "goose"]])
+def test_confidence_labels_must_be_two_ends(labels):
+    with pytest.raises(ValidationError, match="exactly 2"):
+        Task(project_id="p", name="bird", presentation=Presentation.SINGLE,
+             question=QuestionType.CONFIDENCE, config=TaskConfig(labels=labels))
+
+
+def test_confidence_task_rejects_pair_presentation():
+    with pytest.raises(ValidationError):
+        Task(project_id="p", name="quality", presentation=Presentation.PAIR,
+             question=QuestionType.CONFIDENCE)

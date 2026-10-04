@@ -43,6 +43,7 @@ class Presentation(StrEnum):
 class QuestionType(StrEnum):
     HARD_LABEL = "hard_label"
     SOFT_LABEL = "soft_label"
+    CONFIDENCE = "confidence"
     PREFERENCE = "preference"
     SIMILARITY = "similarity"
     RANKING = "ranking"
@@ -50,7 +51,11 @@ class QuestionType(StrEnum):
 
 
 VALID_QUESTIONS: dict[Presentation, set[QuestionType]] = {
-    Presentation.SINGLE: {QuestionType.HARD_LABEL, QuestionType.SOFT_LABEL},
+    Presentation.SINGLE: {
+        QuestionType.HARD_LABEL,
+        QuestionType.SOFT_LABEL,
+        QuestionType.CONFIDENCE,
+    },
     Presentation.PAIR: {QuestionType.PREFERENCE, QuestionType.SIMILARITY},
     Presentation.GROUP: {QuestionType.RANKING, QuestionType.GROUPING},
 }
@@ -100,6 +105,12 @@ class Task(BaseModel):
             )
         if self.question in LABEL_QUESTIONS and not self.config.labels:
             raise ValueError(f"question {self.question} requires config.labels")
+        if (self.question == QuestionType.CONFIDENCE and self.config.labels is not None
+                and len(self.config.labels) != 2):
+            raise ValueError(
+                "confidence config.labels must have exactly 2 entries (score 0 end, score 1 end)"
+                f" (got {len(self.config.labels)})"
+            )
         if self.config.pairing == "anchor":
             if self.presentation != Presentation.PAIR:
                 raise ValueError(

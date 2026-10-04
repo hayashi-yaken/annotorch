@@ -142,3 +142,25 @@ class TestGrouping:
             validate_answer(
                 self.task, self.unit, {"groups": [["i1", "i2", "i3", "i4"], []]}
             )
+
+
+class TestConfidence:
+    def setup_method(self):
+        self.task = make_task(Presentation.SINGLE, QuestionType.CONFIDENCE)
+        self.unit = make_unit(self.task, ["i1"])
+
+    def test_valid(self):
+        assert validate_answer(self.task, self.unit, {"score": 0.7}) == {"score": 0.7}
+
+    def test_accepts_the_bounds(self):
+        assert validate_answer(self.task, self.unit, {"score": 0}) == {"score": 0.0}
+        assert validate_answer(self.task, self.unit, {"score": 1}) == {"score": 1.0}
+
+    def test_rejects_out_of_range(self):
+        with pytest.raises(AnswerValidationError):
+            validate_answer(self.task, self.unit, {"score": 1.5})
+        with pytest.raises(AnswerValidationError):
+            validate_answer(self.task, self.unit, {"score": -0.1})
+
+    def test_null_score_is_a_skip(self):
+        assert validate_answer(self.task, self.unit, {"score": None}) == {"score": None}

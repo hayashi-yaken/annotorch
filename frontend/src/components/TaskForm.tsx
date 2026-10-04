@@ -11,7 +11,7 @@ import { toaster } from "../lib/toaster";
 import { useAsync } from "../lib/useAsync";
 
 const QUESTIONS: Record<Presentation, QuestionType[]> = {
-  single: ["hard_label", "soft_label"],
+  single: ["hard_label", "soft_label", "confidence"],
   pair: ["preference", "similarity"],
   group: ["ranking", "grouping"],
 };
@@ -23,6 +23,8 @@ export default function TaskForm({ projectId, items, onCreated }: {
   const [presentation, setPresentation] = useState<Presentation>("single");
   const [question, setQuestion] = useState<QuestionType>("hard_label");
   const [labels, setLabels] = useState("cat, dog");
+  const [scaleLow, setScaleLow] = useState("低い");
+  const [scaleHigh, setScaleHigh] = useState("高い");
   const [similarityMode, setSimilarityMode] =
     useState<"binary" | "continuous">("continuous");
   const [numUnits, setNumUnits] = useState(50);
@@ -42,6 +44,9 @@ export default function TaskForm({ projectId, items, onCreated }: {
     const config: TaskConfig = { seed };
     if (needsLabels) {
       config.labels = labels.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    if (question === "confidence") {
+      config.labels = [scaleLow.trim() || "低い", scaleHigh.trim() || "高い"];
     }
     if (question === "similarity") config.similarity_mode = similarityMode;
     if (presentation !== "single") config.num_units = numUnits;
@@ -110,6 +115,18 @@ export default function TaskForm({ projectId, items, onCreated }: {
                 <Field.Label>ラベル（カンマ区切り）</Field.Label>
                 <Input value={labels} onChange={(e) => setLabels(e.target.value)} />
               </Field.Root>
+            )}
+            {question === "confidence" && (
+              <>
+                <Field.Root width="8rem">
+                  <Field.Label>0 側のラベル</Field.Label>
+                  <Input value={scaleLow} onChange={(e) => setScaleLow(e.target.value)} />
+                </Field.Root>
+                <Field.Root width="8rem">
+                  <Field.Label>1 側のラベル</Field.Label>
+                  <Input value={scaleHigh} onChange={(e) => setScaleHigh(e.target.value)} />
+                </Field.Root>
+              </>
             )}
             {question === "similarity" && (
               <Field.Root width="12rem">

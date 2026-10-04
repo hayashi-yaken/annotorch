@@ -102,6 +102,20 @@ def test_confidence_task_needs_no_labels():
     assert task.question == QuestionType.CONFIDENCE
 
 
+def test_confidence_task_accepts_two_end_labels():
+    task = Task(project_id="p", name="bird", presentation=Presentation.SINGLE,
+                question=QuestionType.CONFIDENCE,
+                config=TaskConfig(labels=["swan", "duck"]))
+    assert task.config.labels == ["swan", "duck"]
+
+
+@pytest.mark.parametrize("labels", [["swan"], ["swan", "duck", "goose"]])
+def test_confidence_labels_must_be_two_ends(labels):
+    with pytest.raises(ValidationError, match="exactly 2"):
+        Task(project_id="p", name="bird", presentation=Presentation.SINGLE,
+             question=QuestionType.CONFIDENCE, config=TaskConfig(labels=labels))
+
+
 def test_confidence_task_rejects_pair_presentation():
     with pytest.raises(ValidationError):
         Task(project_id="p", name="quality", presentation=Presentation.PAIR,

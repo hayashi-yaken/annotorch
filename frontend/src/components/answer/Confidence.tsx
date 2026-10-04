@@ -3,7 +3,8 @@ import { Button, HStack, NumberInput, Slider, Stack } from "@chakra-ui/react";
 import ItemView from "../ItemView";
 import type { EditorProps } from "./types";
 
-export default function Confidence({ projectId, unit, onSave }: EditorProps) {
+export default function Confidence({ projectId, task, unit, onSave }: EditorProps) {
+  const [low, high] = task.config.labels ?? ["低い", "高い"];
   const initial = (unit.answer?.score as number | null | undefined) ?? 0.5;
   const [score, setScore] = useState<number>(initial);
   // 入力中の文字列は整形せずそのまま保持する。毎キーストロークで score から
@@ -26,7 +27,7 @@ export default function Confidence({ projectId, unit, onSave }: EditorProps) {
           flex="1"
           display="flex" flexDirection="row" alignItems="center" gap={3}
         >
-          <Slider.Label flexShrink={0}>低い</Slider.Label>
+          <Slider.Label flexShrink={0}>{low}</Slider.Label>
           <Slider.Control flex="1">
             <Slider.Track>
               <Slider.Range />
@@ -35,7 +36,7 @@ export default function Confidence({ projectId, unit, onSave }: EditorProps) {
               <Slider.HiddenInput />
             </Slider.Thumb>
           </Slider.Control>
-          <Slider.Label flexShrink={0}>高い</Slider.Label>
+          <Slider.Label flexShrink={0}>{high}</Slider.Label>
         </Slider.Root>
         <NumberInput.Root
           width="6rem"

@@ -156,7 +156,8 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
                 "1 = first item in item_ids wins, -1 = second, 0 = tie"
             )
         if task.question == QuestionType.CONFIDENCE:
-            conventions["confidence_score"] = "0 = lowest, 1 = highest"
+            low, high = task.config.labels or ["lowest", "highest"]
+            conventions["confidence_score"] = f"0 = {low}, 1 = {high}"
         if is_anchor:
             conventions["anchor_item_id"] = (
                 "the fixed reference item of the pair;"

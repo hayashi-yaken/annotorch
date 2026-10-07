@@ -12,7 +12,7 @@ class ProjectCreate(BaseModel):
     description: str = ""
 
 
-class ProjectRename(BaseModel):
+class RenameIn(BaseModel):
     name: str
 
 

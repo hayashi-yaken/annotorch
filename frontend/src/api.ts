@@ -93,6 +93,8 @@ export const api = {
     question: QuestionType; config: TaskConfig;
   }) => req<{ task: Task; num_units: number }>(`/projects/${pid}/tasks`,
     json("POST", body)),
+  renameTask: (pid: string, tid: string, name: string) =>
+    req<Task>(`/projects/${pid}/tasks/${tid}`, json("PATCH", { name })),
   deleteTask: (pid: string, tid: string) =>
     req<{ ok: boolean }>(`/projects/${pid}/tasks/${tid}`, { method: "DELETE" }),
 

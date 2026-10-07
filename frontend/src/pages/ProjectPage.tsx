@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Heading, HStack, Progress, Stack, Text } from "@chakra-ui/react";
+import { Button, Card, Heading, HStack, Input, Progress, Stack, Text } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Item, Project, Task, TaskWithProgress } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -22,6 +22,7 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
   const [tasks, setTasks] = useState<TaskWithProgress[]>([]);
   const [exportTask, setExportTask] = useState<Task | null>(null);
   const [deleteTask, setDeleteTask] = useState<TaskWithProgress | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -39,6 +40,19 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
     }
   }, [project.id]);
   useEffect(() => { refresh(); }, [refresh]);
+
+  const renameTask = useAsync(async () => {
+    if (!renaming || !renaming.name.trim()) return;
+    try {
+      const t = await api.renameTask(project.id, renaming.id, renaming.name.trim());
+      setRenaming(null);
+      if (exportTask?.id === t.id) setExportTask(t);
+      await refresh();
+      toaster.success({ title: `タスク名を「${t.name}」に変更しました` });
+    } catch (e) {
+      toaster.error({ title: "タスク名を変更できませんでした", description: message(e) });
+    }
+  });
 
   const removeTask = useAsync(async (t: TaskWithProgress) => {
     try {
@@ -74,13 +88,40 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
             <Card.Body>
               <Stack gap={2}>
                 <HStack wrap="wrap" gap={3}>
-                  <Text fontWeight="bold">{t.name}</Text>
+                  {renaming?.id === t.id ? (
+                    <>
+                      <Input
+                        size="sm" maxW="16rem" autoFocus
+                        aria-label="変更後のタスク名"
+                        value={renaming.name}
+                        onChange={(e) => setRenaming({ id: t.id, name: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.nativeEvent.isComposing) renameTask.run();
+                          if (e.key === "Escape") setRenaming(null);
+                        }}
+                      />
+                      <Button size="sm" loading={renameTask.pending} loadingText="保存中…"
+                              disabled={!renaming.name.trim()}
+                              onClick={() => renameTask.run()}>保存</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setRenaming(null)}>
+                        キャンセル
+                      </Button>
+                    </>
+                  ) : (
+                    <Text fontWeight="bold">{t.name}</Text>
+                  )}
                   <Text color="gray.500">{t.presentation}/{t.question}</Text>
                   <Text color="gray.500">{t.answered_units}/{t.total_units} 回答済み</Text>
                   <Button size="sm" onClick={() => onAnnotate(t)}>アノテーション</Button>
                   <Button size="sm" variant="outline" onClick={() => setExportTask(t)}>
                     エクスポート
                   </Button>
+                  {renaming?.id !== t.id && (
+                    <Button size="sm" variant="outline"
+                            onClick={() => setRenaming({ id: t.id, name: t.name })}>
+                      名前を変更
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" colorPalette="red"
                           onClick={() => setDeleteTask(t)}>
                     削除

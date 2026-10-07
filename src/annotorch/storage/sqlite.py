@@ -221,6 +221,12 @@ class SqliteStore:
         ).fetchall()
         return [self._row_to_task(r) for r in rows]
 
+    def rename_task(self, task_id: str, name: str) -> None:
+        with self.conn:
+            cur = self.conn.execute("UPDATE tasks SET name = ? WHERE id = ?", (name, task_id))
+        if cur.rowcount == 0:
+            raise LookupError(f"no task {task_id}")
+
     def delete_task(self, task_id: str) -> None:
         # 外部キーの下から順に消す（annotations -> units -> task）。
         # 1トランザクションなので、途中で失敗すれば何も消えない。

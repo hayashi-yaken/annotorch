@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from ...services.projects import ProjectService
-from ..schemas import ProjectCreate, ProjectRename
+from ..schemas import ProjectCreate, RenameIn
 from .deps import project_service
 
 router = APIRouter()
@@ -21,7 +21,7 @@ def create_project(body: ProjectCreate,
 
 
 @router.patch("/projects/{pid}")
-def rename_project(pid: str, body: ProjectRename,
+def rename_project(pid: str, body: RenameIn,
                    svc: ProjectService = Depends(project_service)):
     return svc.rename(pid, body.name)
 

@@ -106,6 +106,10 @@ class SqliteStore:
                 (p.id, p.name, p.description, p.created_at.isoformat()),
             )
 
+    def rename_project(self, name: str) -> None:
+        with self.conn:
+            self.conn.execute("UPDATE projects SET name = ?", (name,))
+
     def get_project(self) -> Project:
         row = self.conn.execute("SELECT * FROM projects LIMIT 1").fetchone()
         if row is None:
@@ -216,6 +220,12 @@ class SqliteStore:
             "SELECT * FROM tasks WHERE project_id = ? ORDER BY rowid", (project_id,)
         ).fetchall()
         return [self._row_to_task(r) for r in rows]
+
+    def rename_task(self, task_id: str, name: str) -> None:
+        with self.conn:
+            cur = self.conn.execute("UPDATE tasks SET name = ? WHERE id = ?", (name, task_id))
+        if cur.rowcount == 0:
+            raise LookupError(f"no task {task_id}")
 
     def delete_task(self, task_id: str) -> None:
         # 外部キーの下から順に消す（annotations -> units -> task）。

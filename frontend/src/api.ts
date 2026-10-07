@@ -60,6 +60,8 @@ export const api = {
   listProjects: () => req<Project[]>("/projects"),
   createProject: (name: string, description = "") =>
     req<Project>("/projects", json("POST", { name, description })),
+  renameProject: (pid: string, name: string) =>
+    req<Project>(`/projects/${pid}`, json("PATCH", { name })),
   deleteProject: (pid: string) =>
     req<{ ok: boolean }>(`/projects/${pid}`, { method: "DELETE" }),
 
@@ -91,6 +93,8 @@ export const api = {
     question: QuestionType; config: TaskConfig;
   }) => req<{ task: Task; num_units: number }>(`/projects/${pid}/tasks`,
     json("POST", body)),
+  renameTask: (pid: string, tid: string, name: string) =>
+    req<Task>(`/projects/${pid}/tasks/${tid}`, json("PATCH", { name })),
   deleteTask: (pid: string, tid: string) =>
     req<{ ok: boolean }>(`/projects/${pid}/tasks/${tid}`, { method: "DELETE" }),
 

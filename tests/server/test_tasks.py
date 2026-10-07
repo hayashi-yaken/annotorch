@@ -54,6 +54,30 @@ def _create_hard_label_task(client, pid: str, name: str) -> str:
     }).json()["task"]["id"]
 
 
+def test_rename_task(client):
+    pid = create_project(client)
+    upload_pngs(client, pid, 2)
+    tid = _create_hard_label_task(client, pid, "cls")
+    res = client.patch(f"/api/projects/{pid}/tasks/{tid}", json={"name": "birds"})
+    assert res.status_code == 200
+    assert res.json()["name"] == "birds"
+    [task] = client.get(f"/api/projects/{pid}/tasks").json()
+    assert (task["name"], task["total_units"]) == ("birds", 2)
+
+
+def test_rename_task_blank_name_400(client):
+    pid = create_project(client)
+    tid = _create_hard_label_task(client, pid, "cls")
+    assert client.patch(f"/api/projects/{pid}/tasks/{tid}",
+                        json={"name": ""}).status_code == 400
+
+
+def test_rename_unknown_task_404(client):
+    pid = create_project(client)
+    assert client.patch(f"/api/projects/{pid}/tasks/nope",
+                        json={"name": "x"}).status_code == 404
+
+
 def test_delete_task_removes_task_units_and_annotations(client):
     pid = create_project(client)
     upload_pngs(client, pid, 3)

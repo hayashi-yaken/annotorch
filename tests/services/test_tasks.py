@@ -31,6 +31,33 @@ def test_create_task_generates_units(env):
     assert task.question == QuestionType.HARD_LABEL
 
 
+def test_rename_task_persists(env):
+    project, tasks = env
+    task, _ = tasks.create_task(
+        project.id, "cls", Presentation.SINGLE, QuestionType.HARD_LABEL,
+        TaskConfig(labels=["cat", "dog"]))
+    renamed = tasks.rename_task(project.id, task.id, "  birds  ")
+    assert renamed.name == "birds"
+    [listed] = tasks.list_tasks_with_progress(project.id)
+    assert (listed.id, listed.name, listed.config) == (task.id, "birds", task.config)
+
+
+def test_rename_task_rejects_blank_name(env):
+    project, tasks = env
+    task, _ = tasks.create_task(
+        project.id, "cls", Presentation.SINGLE, QuestionType.HARD_LABEL,
+        TaskConfig(labels=["cat", "dog"]))
+    with pytest.raises(ValueError):
+        tasks.rename_task(project.id, task.id, " ")
+    assert tasks.list_tasks_with_progress(project.id)[0].name == "cls"
+
+
+def test_rename_unknown_task_raises(env):
+    project, tasks = env
+    with pytest.raises(LookupError):
+        tasks.rename_task(project.id, "nope", "x")
+
+
 def test_create_task_invalid_combination_raises(env):
     project, tasks = env
     with pytest.raises(ValueError):

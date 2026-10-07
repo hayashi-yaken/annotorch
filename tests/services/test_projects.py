@@ -32,6 +32,26 @@ def test_create_list_delete(svc):
     assert svc.list() == []
 
 
+def test_rename_persists(svc):
+    p = svc.create("demo", "desc")
+    renamed = svc.rename(p.id, "  birds  ")
+    assert renamed.name == "birds"
+    [listed] = svc.list()
+    assert (listed.id, listed.name, listed.description) == (p.id, "birds", "desc")
+
+
+def test_rename_rejects_blank_name(svc):
+    p = svc.create("demo")
+    with pytest.raises(ValueError):
+        svc.rename(p.id, "   ")
+    assert svc.list()[0].name == "demo"
+
+
+def test_rename_unknown_project_raises(svc):
+    with pytest.raises(LookupError):
+        svc.rename("nope", "x")
+
+
 def test_import_images_copies_and_reports(svc, tmp_path):
     project = svc.create("demo")
     src = tmp_path / "src"

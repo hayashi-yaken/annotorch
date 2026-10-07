@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from ...services.tasks import TaskService
-from ..schemas import TaskCreate
+from ..schemas import RenameIn, TaskCreate
 from .deps import task_service
 
 router = APIRouter()
@@ -20,6 +20,12 @@ def create_task(pid: str, body: TaskCreate,
 @router.get("/projects/{pid}/tasks")
 def list_tasks(pid: str, svc: TaskService = Depends(task_service)):
     return svc.list_tasks_with_progress(pid)
+
+
+@router.patch("/projects/{pid}/tasks/{tid}")
+def rename_task(pid: str, tid: str, body: RenameIn,
+                svc: TaskService = Depends(task_service)):
+    return svc.rename_task(pid, tid, body.name)
 
 
 @router.delete("/projects/{pid}/tasks/{tid}")

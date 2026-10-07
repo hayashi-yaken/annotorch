@@ -7,6 +7,23 @@ def test_create_and_list_projects(client):
     assert [p["id"] for p in listed] == [body["id"]]
 
 
+def test_rename_project(client):
+    pid = client.post("/api/projects", json={"name": "old"}).json()["id"]
+    res = client.patch(f"/api/projects/{pid}", json={"name": "new"})
+    assert res.status_code == 200
+    assert res.json()["name"] == "new"
+    assert [p["name"] for p in client.get("/api/projects").json()] == ["new"]
+
+
+def test_rename_project_blank_name_400(client):
+    pid = client.post("/api/projects", json={"name": "old"}).json()["id"]
+    assert client.patch(f"/api/projects/{pid}", json={"name": " "}).status_code == 400
+
+
+def test_rename_unknown_project_404(client):
+    assert client.patch("/api/projects/nope", json={"name": "x"}).status_code == 404
+
+
 def test_delete_project(client):
     pid = client.post("/api/projects", json={"name": "x"}).json()["id"]
     assert client.delete(f"/api/projects/{pid}").json() == {"ok": True}

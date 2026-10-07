@@ -12,6 +12,10 @@ class ProjectCreate(BaseModel):
     description: str = ""
 
 
+class RenameIn(BaseModel):
+    name: str
+
+
 class FolderImport(BaseModel):
     path: str
 

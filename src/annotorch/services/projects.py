@@ -36,6 +36,14 @@ class ProjectService:
     def list(self) -> list[Project]:
         return self.ws.list_projects()
 
+    def rename(self, project_id: str, name: str) -> Project:
+        name = name.strip()
+        if not name:
+            raise ValueError("project name must not be empty")
+        with self.ws.open(project_id) as store:
+            store.rename_project(name)
+            return store.get_project()
+
     def delete(self, project_id: str) -> None:
         self.ws.delete_project(project_id)
 

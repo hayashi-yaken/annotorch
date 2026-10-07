@@ -62,6 +62,14 @@ class TaskService:
                 ))
             return out
 
+    def rename_task(self, project_id: str, task_id: str, name: str) -> Task:
+        name = name.strip()
+        if not name:
+            raise ValueError("task name must not be empty")
+        with self.ws.open(project_id) as store:
+            store.rename_task(task_id, name)
+            return store.get_task(task_id)
+
     def delete_task(self, project_id: str, task_id: str) -> None:
         with self.ws.open(project_id) as store:
             store.delete_task(task_id)

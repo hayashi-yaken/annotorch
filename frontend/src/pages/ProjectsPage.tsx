@@ -3,6 +3,8 @@ import { Box, Button, Card, HStack, Input, Stack, Text } from "@chakra-ui/react"
 import ConfirmDialog from "../components/ConfirmDialog";
 import Layout from "../components/Layout";
 import Loader from "../components/Loader";
+import MoreMenu from "../components/MoreMenu";
+import TruncatedText from "../components/TruncatedText";
 import { api } from "../api";
 import { message } from "../lib/errors";
 import { toaster } from "../lib/toaster";
@@ -14,6 +16,7 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
   const [ready, setReady] = useState(false);
   const [name, setName] = useState("");
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
 
   const refresh = () =>
     api.listProjects()
@@ -32,6 +35,18 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
       toaster.success({ title: `プロジェクト「${p.name}」を作成しました` });
     } catch (e) {
       toaster.error({ title: "プロジェクトを作成できませんでした", description: message(e) });
+    }
+  });
+
+  const rename = useAsync(async () => {
+    if (!renaming || !renaming.name.trim()) return;
+    try {
+      const p = await api.renameProject(renaming.id, renaming.name.trim());
+      setRenaming(null);
+      await refresh();
+      toaster.success({ title: `プロジェクト名を「${p.name}」に変更しました` });
+    } catch (e) {
+      toaster.error({ title: "プロジェクト名を変更できませんでした", description: message(e) });
     }
   });
 
@@ -65,17 +80,42 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
             {projects.map((p) => (
               <Card.Root key={p.id}>
                 <Card.Body>
-                  <HStack justify="space-between" wrap="wrap">
-                    <Box>
-                      <Text fontWeight="bold">{p.name}</Text>
-                      <Text color="fg.muted">{p.description}</Text>
-                    </Box>
+                  {renaming?.id === p.id ? (
                     <HStack>
-                      <Button onClick={() => onOpen(p)}>開く</Button>
-                      <Button colorPalette="red" variant="outline"
-                              onClick={() => setPendingDelete(p)}>削除</Button>
+                      <Input
+                        autoFocus
+                        aria-label="プロジェクト名"
+                        value={renaming.name}
+                        onChange={(e) => setRenaming({ id: p.id, name: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.nativeEvent.isComposing) rename.run();
+                          if (e.key === "Escape") setRenaming(null);
+                        }}
+                      />
+                      <Button loading={rename.pending} loadingText="保存中…"
+                              disabled={!renaming.name.trim()}
+                              onClick={() => rename.run()}>保存</Button>
+                      <Button variant="ghost" onClick={() => setRenaming(null)}>
+                        キャンセル
+                      </Button>
                     </HStack>
-                  </HStack>
+                  ) : (
+                    <HStack justify="space-between" wrap="wrap">
+                      <Box flex="1" minW="12rem">
+                        <TruncatedText fontWeight="bold">{p.name}</TruncatedText>
+                        <Text color="fg.muted">{p.description}</Text>
+                      </Box>
+                      <HStack flexShrink={0}>
+                        <Button onClick={() => onOpen(p)}>開く</Button>
+                        <MoreMenu items={[
+                          { value: "rename", label: "名前を変更",
+                            onSelect: () => setRenaming({ id: p.id, name: p.name }) },
+                          { value: "delete", label: "削除", danger: true,
+                            onSelect: () => setPendingDelete(p) },
+                        ]} />
+                      </HStack>
+                    </HStack>
+                  )}
                 </Card.Body>
               </Card.Root>
             ))}

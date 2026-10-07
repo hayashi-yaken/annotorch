@@ -3,6 +3,7 @@ import { Box, Button, Card, HStack, Input, Stack, Text } from "@chakra-ui/react"
 import ConfirmDialog from "../components/ConfirmDialog";
 import Layout from "../components/Layout";
 import Loader from "../components/Loader";
+import MoreMenu from "../components/MoreMenu";
 import { api } from "../api";
 import { message } from "../lib/errors";
 import { toaster } from "../lib/toaster";
@@ -105,12 +106,12 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
                       </Box>
                       <HStack>
                         <Button onClick={() => onOpen(p)}>開く</Button>
-                        <Button variant="outline"
-                                onClick={() => setRenaming({ id: p.id, name: p.name })}>
-                          名前を変更
-                        </Button>
-                        <Button colorPalette="red" variant="outline"
-                                onClick={() => setPendingDelete(p)}>削除</Button>
+                        <MoreMenu items={[
+                          { value: "rename", label: "名前を変更",
+                            onSelect: () => setRenaming({ id: p.id, name: p.name }) },
+                          { value: "delete", label: "削除", danger: true,
+                            onSelect: () => setPendingDelete(p) },
+                        ]} />
                       </HStack>
                     </HStack>
                   )}

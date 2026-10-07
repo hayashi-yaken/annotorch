@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Heading, HStack, Input, Progress, Stack, Text } from "@chakra-ui/react";
+import {
+  Button, Card, Heading, HStack, Input, Progress, Spacer, Stack, Text,
+} from "@chakra-ui/react";
 import { api } from "../api";
 import type { Item, Project, Task, TaskWithProgress } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -8,6 +10,7 @@ import ImportPanel from "../components/ImportPanel";
 import ItemGrid from "../components/ItemGrid";
 import Layout from "../components/Layout";
 import Loader from "../components/Loader";
+import MoreMenu from "../components/MoreMenu";
 import TaskForm from "../components/TaskForm";
 import { toaster } from "../lib/toaster";
 import { message } from "../lib/errors";
@@ -112,20 +115,19 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
                   )}
                   <Text color="gray.500">{t.presentation}/{t.question}</Text>
                   <Text color="gray.500">{t.answered_units}/{t.total_units} 回答済み</Text>
+                </HStack>
+                <HStack gap={2}>
                   <Button size="sm" onClick={() => onAnnotate(t)}>アノテーション</Button>
                   <Button size="sm" variant="outline" onClick={() => setExportTask(t)}>
                     エクスポート
                   </Button>
-                  {renaming?.id !== t.id && (
-                    <Button size="sm" variant="outline"
-                            onClick={() => setRenaming({ id: t.id, name: t.name })}>
-                      名前を変更
-                    </Button>
-                  )}
-                  <Button size="sm" variant="outline" colorPalette="red"
-                          onClick={() => setDeleteTask(t)}>
-                    削除
-                  </Button>
+                  <Spacer />
+                  <MoreMenu size="sm" items={[
+                    { value: "rename", label: "名前を変更",
+                      onSelect: () => setRenaming({ id: t.id, name: t.name }) },
+                    { value: "delete", label: "削除", danger: true,
+                      onSelect: () => setDeleteTask(t) },
+                  ]} />
                 </HStack>
                 <Progress.Root
                   value={t.total_units ? (100 * t.answered_units) / t.total_units : 0}

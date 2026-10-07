@@ -60,6 +60,8 @@ export const api = {
   listProjects: () => req<Project[]>("/projects"),
   createProject: (name: string, description = "") =>
     req<Project>("/projects", json("POST", { name, description })),
+  renameProject: (pid: string, name: string) =>
+    req<Project>(`/projects/${pid}`, json("PATCH", { name })),
   deleteProject: (pid: string) =>
     req<{ ok: boolean }>(`/projects/${pid}`, { method: "DELETE" }),
 

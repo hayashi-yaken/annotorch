@@ -106,6 +106,10 @@ class SqliteStore:
                 (p.id, p.name, p.description, p.created_at.isoformat()),
             )
 
+    def rename_project(self, name: str) -> None:
+        with self.conn:
+            self.conn.execute("UPDATE projects SET name = ?", (name,))
+
     def get_project(self) -> Project:
         row = self.conn.execute("SELECT * FROM projects LIMIT 1").fetchone()
         if row is None:

@@ -14,6 +14,7 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
   const [ready, setReady] = useState(false);
   const [name, setName] = useState("");
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
 
   const refresh = () =>
     api.listProjects()
@@ -32,6 +33,18 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
       toaster.success({ title: `プロジェクト「${p.name}」を作成しました` });
     } catch (e) {
       toaster.error({ title: "プロジェクトを作成できませんでした", description: message(e) });
+    }
+  });
+
+  const rename = useAsync(async () => {
+    if (!renaming || !renaming.name.trim()) return;
+    try {
+      const p = await api.renameProject(renaming.id, renaming.name.trim());
+      setRenaming(null);
+      await refresh();
+      toaster.success({ title: `プロジェクト名を「${p.name}」に変更しました` });
+    } catch (e) {
+      toaster.error({ title: "プロジェクト名を変更できませんでした", description: message(e) });
     }
   });
 
@@ -65,17 +78,42 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
             {projects.map((p) => (
               <Card.Root key={p.id}>
                 <Card.Body>
-                  <HStack justify="space-between" wrap="wrap">
-                    <Box>
-                      <Text fontWeight="bold">{p.name}</Text>
-                      <Text color="fg.muted">{p.description}</Text>
-                    </Box>
+                  {renaming?.id === p.id ? (
                     <HStack>
-                      <Button onClick={() => onOpen(p)}>開く</Button>
-                      <Button colorPalette="red" variant="outline"
-                              onClick={() => setPendingDelete(p)}>削除</Button>
+                      <Input
+                        autoFocus
+                        aria-label="プロジェクト名"
+                        value={renaming.name}
+                        onChange={(e) => setRenaming({ id: p.id, name: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.nativeEvent.isComposing) rename.run();
+                          if (e.key === "Escape") setRenaming(null);
+                        }}
+                      />
+                      <Button loading={rename.pending} loadingText="保存中…"
+                              disabled={!renaming.name.trim()}
+                              onClick={() => rename.run()}>保存</Button>
+                      <Button variant="ghost" onClick={() => setRenaming(null)}>
+                        キャンセル
+                      </Button>
                     </HStack>
-                  </HStack>
+                  ) : (
+                    <HStack justify="space-between" wrap="wrap">
+                      <Box>
+                        <Text fontWeight="bold">{p.name}</Text>
+                        <Text color="fg.muted">{p.description}</Text>
+                      </Box>
+                      <HStack>
+                        <Button onClick={() => onOpen(p)}>開く</Button>
+                        <Button variant="outline"
+                                onClick={() => setRenaming({ id: p.id, name: p.name })}>
+                          名前を変更
+                        </Button>
+                        <Button colorPalette="red" variant="outline"
+                                onClick={() => setPendingDelete(p)}>削除</Button>
+                      </HStack>
+                    </HStack>
+                  )}
                 </Card.Body>
               </Card.Root>
             ))}

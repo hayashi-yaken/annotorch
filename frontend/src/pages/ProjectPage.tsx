@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Button, Card, Heading, HStack, Input, Progress, Spacer, Stack, Text,
+  Button, Card, Heading, HStack, Input, Progress, Stack, Text,
 } from "@chakra-ui/react";
 import { api } from "../api";
 import type { Item, Project, Task, TaskWithProgress } from "../api";
@@ -12,6 +12,7 @@ import Layout from "../components/Layout";
 import Loader from "../components/Loader";
 import MoreMenu from "../components/MoreMenu";
 import TaskForm from "../components/TaskForm";
+import TruncatedText from "../components/TruncatedText";
 import { toaster } from "../lib/toaster";
 import { message } from "../lib/errors";
 import { useAsync } from "../lib/useAsync";
@@ -90,44 +91,46 @@ export default function ProjectPage({ project, onBack, onAnnotate }: {
           <Card.Root key={t.id}>
             <Card.Body>
               <Stack gap={2}>
-                <HStack wrap="wrap" gap={3}>
-                  {renaming?.id === t.id ? (
-                    <>
-                      <Input
-                        size="sm" maxW="16rem" autoFocus
-                        aria-label="変更後のタスク名"
-                        value={renaming.name}
-                        onChange={(e) => setRenaming({ id: t.id, name: e.target.value })}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.nativeEvent.isComposing) renameTask.run();
-                          if (e.key === "Escape") setRenaming(null);
-                        }}
-                      />
-                      <Button size="sm" loading={renameTask.pending} loadingText="保存中…"
-                              disabled={!renaming.name.trim()}
-                              onClick={() => renameTask.run()}>保存</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setRenaming(null)}>
-                        キャンセル
-                      </Button>
-                    </>
-                  ) : (
-                    <Text fontWeight="bold">{t.name}</Text>
-                  )}
-                  <Text color="gray.500">{t.presentation}/{t.question}</Text>
-                  <Text color="gray.500">{t.answered_units}/{t.total_units} 回答済み</Text>
-                </HStack>
-                <HStack gap={2}>
-                  <Button size="sm" onClick={() => onAnnotate(t)}>アノテーション</Button>
-                  <Button size="sm" variant="outline" onClick={() => setExportTask(t)}>
-                    エクスポート
-                  </Button>
-                  <Spacer />
-                  <MoreMenu size="sm" items={[
-                    { value: "rename", label: "名前を変更",
-                      onSelect: () => setRenaming({ id: t.id, name: t.name }) },
-                    { value: "delete", label: "削除", danger: true,
-                      onSelect: () => setDeleteTask(t) },
-                  ]} />
+                <HStack align="flex-start" justify="space-between" wrap="wrap" gap={3}>
+                  <Stack gap={1} flex="1" minW="12rem">
+                    {renaming?.id === t.id ? (
+                      <HStack gap={2}>
+                        <Input
+                          size="sm" flex="1" autoFocus
+                          aria-label="変更後のタスク名"
+                          value={renaming.name}
+                          onChange={(e) => setRenaming({ id: t.id, name: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.nativeEvent.isComposing) renameTask.run();
+                            if (e.key === "Escape") setRenaming(null);
+                          }}
+                        />
+                        <Button size="sm" loading={renameTask.pending} loadingText="保存中…"
+                                disabled={!renaming.name.trim()}
+                                onClick={() => renameTask.run()}>保存</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setRenaming(null)}>
+                          キャンセル
+                        </Button>
+                      </HStack>
+                    ) : (
+                      <TruncatedText fontWeight="bold">{t.name}</TruncatedText>
+                    )}
+                    <Text fontSize="sm" color="gray.500">
+                      {t.presentation}/{t.question} ・ {t.answered_units}/{t.total_units} 回答済み
+                    </Text>
+                  </Stack>
+                  <HStack gap={2} flexShrink={0}>
+                    <Button size="sm" onClick={() => onAnnotate(t)}>アノテーション</Button>
+                    <Button size="sm" variant="outline" onClick={() => setExportTask(t)}>
+                      エクスポート
+                    </Button>
+                    <MoreMenu size="sm" items={[
+                      { value: "rename", label: "名前を変更",
+                        onSelect: () => setRenaming({ id: t.id, name: t.name }) },
+                      { value: "delete", label: "削除", danger: true,
+                        onSelect: () => setDeleteTask(t) },
+                    ]} />
+                  </HStack>
                 </HStack>
                 <Progress.Root
                   value={t.total_units ? (100 * t.answered_units) / t.total_units : 0}

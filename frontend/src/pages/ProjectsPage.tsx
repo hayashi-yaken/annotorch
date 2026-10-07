@@ -4,6 +4,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import Layout from "../components/Layout";
 import Loader from "../components/Loader";
 import MoreMenu from "../components/MoreMenu";
+import TruncatedText from "../components/TruncatedText";
 import { api } from "../api";
 import { message } from "../lib/errors";
 import { toaster } from "../lib/toaster";
@@ -100,11 +101,11 @@ export default function ProjectsPage({ onOpen }: { onOpen: (p: Project) => void 
                     </HStack>
                   ) : (
                     <HStack justify="space-between" wrap="wrap">
-                      <Box>
-                        <Text fontWeight="bold">{p.name}</Text>
+                      <Box flex="1" minW="12rem">
+                        <TruncatedText fontWeight="bold">{p.name}</TruncatedText>
                         <Text color="fg.muted">{p.description}</Text>
                       </Box>
-                      <HStack>
+                      <HStack flexShrink={0}>
                         <Button onClick={() => onOpen(p)}>開く</Button>
                         <MoreMenu items={[
                           { value: "rename", label: "名前を変更",

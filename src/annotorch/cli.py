@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from .services.tasks import TaskService
 from .storage.workspace import Workspace
 
 DEFAULT_ROOT = Path.home() / ".annotorch"
+LOG_LEVELS = ("debug", "info", "warning", "error")
 
 
 def _parse_splits(text: str) -> dict[str, float]:
@@ -55,6 +57,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         import uvicorn
 
         from .server.app import create_app
+        from .server.logconfig import build_log_config
     except ImportError:
         print(
             "error: server dependencies are not installed."
@@ -69,7 +72,8 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
         url = f"http://{args.host}:{args.port}"
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
-    uvicorn.run(app, host=args.host, port=args.port)
+    uvicorn.run(app, host=args.host, port=args.port,
+                log_level=args.log_level, log_config=build_log_config(args.log_level))
     return 0
 
 
@@ -96,9 +100,17 @@ def main(argv: list[str] | None = None) -> int:
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8000)
     p_serve.add_argument("--no-browser", action="store_true")
+    p_serve.add_argument("--log-level", type=str.lower, choices=LOG_LEVELS,
+                         help="default: $ANNOTORCH_LOG_LEVEL, otherwise info")
     p_serve.set_defaults(func=_cmd_serve)
 
     args = parser.parse_args(argv)
+    if args.func is _cmd_serve and args.log_level is None:
+        env = os.environ.get("ANNOTORCH_LOG_LEVEL", "info")
+        if env.lower() not in LOG_LEVELS:
+            p_serve.error(f"invalid ANNOTORCH_LOG_LEVEL {env!r}"
+                          f" (choose from {', '.join(LOG_LEVELS)})")
+        args.log_level = env.lower()
     try:
         return args.func(args)
     except Exception as e:

@@ -7,6 +7,7 @@ from PIL import Image
 from torch.utils.data import DataLoader
 
 from annotorch.datasets import load
+from annotorch.errors import InvalidInputError, NotADatasetError
 
 
 def write_dataset(root, question, classes, rows, image_ids=(), text_items=()):
@@ -105,5 +106,10 @@ def test_unknown_split_raises(tmp_path):
     ids = ["a"]
     write_dataset(tmp_path, "hard_label", ["cat", "dog"],
                   hard_rows(ids, ["cat"]), image_ids=ids)
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         load(tmp_path, split="test")
+
+
+def test_directory_without_manifest_raises(tmp_path):
+    with pytest.raises(NotADatasetError, match="no manifest.json"):
+        load(tmp_path)

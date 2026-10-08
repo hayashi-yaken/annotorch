@@ -4,6 +4,7 @@ import pytest
 
 from annotorch.domain.models import Presentation, QuestionType, Task, TaskConfig
 from annotorch.domain.units import generate_units
+from annotorch.errors import InvalidInputError
 
 ITEMS = [f"i{n}" for n in range(6)]
 
@@ -51,7 +52,7 @@ def test_pair_seed_changes_result():
 
 def test_pair_errors_when_items_insufficient():
     task = make_task(Presentation.PAIR, QuestionType.PREFERENCE, num_units=4, seed=0)
-    with pytest.raises(ValueError, match="at least 8 items"):
+    with pytest.raises(InvalidInputError, match="at least 8 items"):
         generate_units(task, ITEMS)
 
 
@@ -64,7 +65,7 @@ def test_pair_deterministic_by_seed():
 
 def test_pair_requires_num_units():
     task = make_task(Presentation.PAIR, QuestionType.PREFERENCE)
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         generate_units(task, ITEMS)
 
 
@@ -81,7 +82,7 @@ def test_group_units():
 def test_group_size_too_large():
     task = make_task(Presentation.GROUP, QuestionType.RANKING,
                      num_units=1, group_size=7)
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         generate_units(task, ITEMS)
 
 
@@ -131,15 +132,15 @@ def test_anchor_side_is_shuffled():
 
 
 def test_anchor_errors_when_partners_insufficient():
-    with pytest.raises(ValueError, match="non-anchor items"):
+    with pytest.raises(InvalidInputError, match="non-anchor items"):
         generate_units(make_anchor_task(5), ITEMS)
 
 
 def test_anchor_errors_when_budget_below_anchor_count():
-    with pytest.raises(ValueError, match="num_units"):
+    with pytest.raises(InvalidInputError, match="num_units"):
         generate_units(make_anchor_task(1, anchors=["i0", "i1", "i2"]), ITEMS)
 
 
 def test_anchor_errors_on_unknown_anchor_id():
-    with pytest.raises(ValueError, match="unknown anchor"):
+    with pytest.raises(InvalidInputError, match="unknown anchor"):
         generate_units(make_anchor_task(2, anchors=["i0", "zzz"]), ITEMS)

@@ -9,6 +9,7 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 from ..domain.models import Item, Modality, Project
+from ..errors import InvalidInputError, ItemFileMissingError, NotFoundError
 from ..storage.workspace import Workspace
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
@@ -39,7 +40,7 @@ class ProjectService:
     def rename(self, project_id: str, name: str) -> Project:
         name = name.strip()
         if not name:
-            raise ValueError("project name must not be empty")
+            raise InvalidInputError("project name must not be empty")
         with self.ws.open(project_id) as store:
             store.rename_project(name)
             return store.get_project()
@@ -55,8 +56,11 @@ class ProjectService:
         with self.ws.open(project_id) as store:
             match = [i for i in store.list_items(project_id) if i.id == item_id]
         if not match or match[0].path is None:
-            raise LookupError(f"no file for item {item_id}")
-        return self.ws.items_dir(project_id) / match[0].path
+            raise NotFoundError(f"no file for item {item_id}")
+        path = self.ws.items_dir(project_id) / match[0].path
+        if not path.is_file():
+            raise ItemFileMissingError(f"file for item {item_id} is missing: {path}")
+        return path
 
     def delete_items(self, project_id: str, item_ids: list[str]) -> int:
         """アイテムを削除し、削除した件数を返す。 参照中のものが混じっていれば何も削除しない。"""

@@ -7,11 +7,13 @@ from typing import Any, Callable
 from PIL import Image
 from torch.utils.data import Dataset
 
+from ..errors import InvalidInputError, NotADatasetError
+
 
 def read_manifest(root: Path | str) -> dict:
     manifest_path = Path(root) / "manifest.json"
     if not manifest_path.exists():
-        raise FileNotFoundError(f"not an annotorch dataset (no manifest.json): {root}")
+        raise NotADatasetError(f"not an annotorch dataset (no manifest.json): {root}")
     return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
@@ -24,7 +26,7 @@ class AnnotorchDataset(Dataset):
         self.manifest = read_manifest(self.root)
         available = self.manifest.get("splits", {})
         if split not in available:
-            raise ValueError(
+            raise InvalidInputError(
                 f"split {split!r} not in dataset (available: {sorted(available)})"
             )
         self.split = split

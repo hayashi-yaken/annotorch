@@ -1,7 +1,8 @@
 import pytest
 
-from annotorch.domain.answers import AnswerValidationError, validate_answer
+from annotorch.domain.answers import validate_answer
 from annotorch.domain.models import Presentation, QuestionType, Task, TaskConfig, Unit
+from annotorch.errors import AnswerValidationError
 
 
 def make_task(presentation, question, **config):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 
+from ..errors import InvalidInputError
 from .models import Presentation, Task, Unit
 
 
@@ -11,16 +12,16 @@ def _anchor_units(task: Task, item_ids: list[str], rng: random.Random) -> list[U
     anchor_set, known = set(anchors), set(item_ids)
     unknown = [a for a in anchors if a not in known]
     if unknown:
-        raise ValueError(f"unknown anchor item ids: {unknown}")
+        raise InvalidInputError(f"unknown anchor item ids: {unknown}")
 
     n, k = task.config.num_units, len(anchors)
     if n < k:
-        raise ValueError(
+        raise InvalidInputError(
             f"anchor task requires num_units >= {k} anchors (got {n})"
         )
     candidates = [i for i in item_ids if i not in anchor_set]
     if n > len(candidates):
-        raise ValueError(
+        raise InvalidInputError(
             f"anchor task requires at least {n} non-anchor items for"
             f" num_units={n} (got {len(candidates)})"
         )
@@ -50,12 +51,12 @@ def generate_units(task: Task, item_ids: list[str]) -> list[Unit]:
 
     if task.presentation == Presentation.PAIR:
         if task.config.num_units is None:
-            raise ValueError("pair task requires config.num_units")
+            raise InvalidInputError("pair task requires config.num_units")
         if task.config.pairing == "anchor":
             return _anchor_units(task, item_ids, rng)
         n = task.config.num_units
         if 2 * n > len(item_ids):
-            raise ValueError(
+            raise InvalidInputError(
                 f"pair task requires at least {2 * n} items for num_units={n}"
                 f" (got {len(item_ids)})"
             )
@@ -69,9 +70,9 @@ def generate_units(task: Task, item_ids: list[str]) -> list[Unit]:
     if task.presentation == Presentation.GROUP:
         size = task.config.group_size
         if task.config.num_units is None or size is None:
-            raise ValueError("group task requires config.num_units and config.group_size")
+            raise InvalidInputError("group task requires config.num_units and config.group_size")
         if size < 2 or size > len(item_ids):
-            raise ValueError(
+            raise InvalidInputError(
                 f"group_size must be in [2, {len(item_ids)}] (got {size})"
             )
         return [
@@ -79,4 +80,4 @@ def generate_units(task: Task, item_ids: list[str]) -> list[Unit]:
             for pos in range(task.config.num_units)
         ]
 
-    raise ValueError(f"unsupported presentation: {task.presentation}")
+    raise InvalidInputError(f"unsupported presentation: {task.presentation}")

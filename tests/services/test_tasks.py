@@ -1,8 +1,8 @@
 import pytest
 from PIL import Image
 
-from annotorch.domain.answers import AnswerValidationError
 from annotorch.domain.models import Presentation, QuestionType, TaskConfig
+from annotorch.errors import AnswerValidationError, InvalidInputError, NotFoundError
 from annotorch.services.projects import ProjectService
 from annotorch.services.tasks import TaskService
 from annotorch.storage.workspace import Workspace
@@ -47,27 +47,27 @@ def test_rename_task_rejects_blank_name(env):
     task, _ = tasks.create_task(
         project.id, "cls", Presentation.SINGLE, QuestionType.HARD_LABEL,
         TaskConfig(labels=["cat", "dog"]))
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         tasks.rename_task(project.id, task.id, " ")
     assert tasks.list_tasks_with_progress(project.id)[0].name == "cls"
 
 
 def test_rename_unknown_task_raises(env):
     project, tasks = env
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         tasks.rename_task(project.id, "nope", "x")
 
 
 def test_create_task_invalid_combination_raises(env):
     project, tasks = env
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         tasks.create_task(project.id, "bad", Presentation.SINGLE,
                           QuestionType.PREFERENCE, TaskConfig())
 
 
 def test_create_pair_task_without_num_units_raises(env):
     project, tasks = env
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         tasks.create_task(project.id, "pref", Presentation.PAIR,
                           QuestionType.PREFERENCE, TaskConfig())
 
@@ -110,5 +110,5 @@ def test_save_answer_unknown_unit_raises(env):
     task, _ = tasks.create_task(
         project.id, "cls", Presentation.SINGLE, QuestionType.HARD_LABEL,
         TaskConfig(labels=["cat", "dog"]))
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         tasks.save_answer(project.id, task.id, "nope", {"label": "cat"})

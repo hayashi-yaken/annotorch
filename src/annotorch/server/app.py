@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .. import __version__
-from ..errors import ItemsInUseError
 from ..services.exports import ExportService
 from ..services.projects import ProjectService
 from ..services.tasks import TaskService
 from ..storage.workspace import Workspace
+from .errors import install_error_handlers
 from .routers import annotations, export, items, projects, tasks
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -25,6 +24,8 @@ def create_app(root: Path | str) -> FastAPI:
     app.state.tasks = TaskService(ws)
     app.state.exports = ExportService(ws)
 
+    install_error_handlers(app)
+
     # 計画3の開発サーバー（vite, :5173）からのアクセス用
     app.add_middleware(
         CORSMiddleware,
@@ -32,22 +33,6 @@ def create_app(root: Path | str) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    @app.exception_handler(LookupError)
-    async def _not_found(request: Request, exc: LookupError):
-        return JSONResponse(status_code=404, content={"detail": str(exc)})
-
-    @app.exception_handler(ValueError)  # AnswerValidationError も ValueError
-    async def _bad_request(request: Request, exc: ValueError):
-        return JSONResponse(status_code=400, content={"detail": str(exc)})
-
-    @app.exception_handler(ItemsInUseError)
-    async def _items_in_use(request: Request, exc: ItemsInUseError):
-        return JSONResponse(status_code=409, content={"detail": str(exc)})
-
-    @app.exception_handler(FileExistsError)
-    async def _conflict(request: Request, exc: FileExistsError):
-        return JSONResponse(status_code=409, content={"detail": str(exc)})
 
     @app.get("/api/health")
     def health():

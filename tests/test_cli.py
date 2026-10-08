@@ -1,6 +1,6 @@
 import json
-import sys
 
+import pytest
 from PIL import Image
 
 from annotorch.cli import main
@@ -64,16 +64,46 @@ def test_export_error_is_reported(tmp_path, capsys):
     assert "error" in capsys.readouterr().err.lower()
 
 
-def test_serve_invokes_uvicorn(tmp_path, monkeypatch):
-    calls = {}
+def _run_serve(monkeypatch, tmp_path, *extra):
+    import uvicorn
 
-    class FakeUvicorn:
-        @staticmethod
-        def run(app, host, port):
-            calls["host"] = host
-            calls["port"] = port
-
-    monkeypatch.setitem(sys.modules, "uvicorn", FakeUvicorn)
-    code = main(["serve", "--root", str(tmp_path), "--port", "9999", "--no-browser"])
+    captured = {}
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: captured.update(kw))
+    code = main(["serve", "--root", str(tmp_path / "root"), "--no-browser", *extra])
     assert code == 0
-    assert calls == {"host": "127.0.0.1", "port": 9999}
+    return captured
+
+
+def test_serve_invokes_uvicorn(tmp_path, monkeypatch):
+    kw = _run_serve(monkeypatch, tmp_path, "--port", "9999")
+    assert (kw["host"], kw["port"]) == ("127.0.0.1", 9999)
+
+
+def test_serve_log_level_defaults_to_info(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANNOTORCH_LOG_LEVEL", raising=False)
+    kw = _run_serve(monkeypatch, tmp_path)
+    assert kw["log_level"] == "info"
+    assert kw["log_config"]["loggers"]["annotorch"]["level"] == "INFO"
+
+
+def test_serve_log_level_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANNOTORCH_LOG_LEVEL", "debug")
+    assert _run_serve(monkeypatch, tmp_path)["log_level"] == "debug"
+
+
+def test_serve_log_level_flag_beats_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANNOTORCH_LOG_LEVEL", "debug")
+    assert _run_serve(monkeypatch, tmp_path, "--log-level", "warning")["log_level"] == "warning"
+
+
+def test_serve_log_level_env_is_case_insensitive(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANNOTORCH_LOG_LEVEL", "DEBUG")
+    assert _run_serve(monkeypatch, tmp_path)["log_level"] == "debug"
+
+
+def test_serve_rejects_unknown_log_level_env(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("ANNOTORCH_LOG_LEVEL", "warn")
+    with pytest.raises(SystemExit) as excinfo:
+        main(["serve", "--root", str(tmp_path / "root"), "--no-browser"])
+    assert excinfo.value.code == 2
+    assert "ANNOTORCH_LOG_LEVEL" in capsys.readouterr().err

@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .. import __version__
-from ..domain.models import ItemsInUseError
+from ..errors import ItemsInUseError
 from ..services.exports import ExportService
 from ..services.projects import ProjectService
 from ..services.tasks import TaskService

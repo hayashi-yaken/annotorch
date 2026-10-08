@@ -4,13 +4,18 @@ import pytest
 from PIL import Image
 
 from annotorch.domain.models import (
-    ItemsInUseError,
     Modality,
     Presentation,
     QuestionType,
     Task,
     TaskConfig,
     Unit,
+)
+from annotorch.errors import (
+    InvalidInputError,
+    ItemFileMissingError,
+    ItemsInUseError,
+    NotFoundError,
 )
 from annotorch.services.projects import ProjectService
 from annotorch.storage.workspace import Workspace
@@ -42,13 +47,13 @@ def test_rename_persists(svc):
 
 def test_rename_rejects_blank_name(svc):
     p = svc.create("demo")
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         svc.rename(p.id, "   ")
     assert svc.list()[0].name == "demo"
 
 
 def test_rename_unknown_project_raises(svc):
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         svc.rename("nope", "x")
 
 
@@ -78,8 +83,21 @@ def test_import_images_copies_and_reports(svc, tmp_path):
 
 def test_item_file_path_unknown_raises(svc):
     project = svc.create("demo")
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         svc.item_file_path(project.id, "nope")
+
+
+def test_item_file_path_raises_when_file_is_gone(svc, tmp_path):
+    project = svc.create("demo")
+    src = tmp_path / "src"
+    src.mkdir()
+    make_png(src / "a.png")
+    svc.import_images(project.id, src)
+    [item] = svc.list_items(project.id)
+    path = svc.item_file_path(project.id, item.id)
+    path.unlink()
+    with pytest.raises(ItemFileMissingError, match=item.id):
+        svc.item_file_path(project.id, item.id)
 
 
 def test_import_images_empty_dir_does_not_crash(svc, tmp_path):

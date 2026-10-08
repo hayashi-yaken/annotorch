@@ -4,13 +4,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ValidationError
 
+from ..errors import AnswerValidationError
 from .models import QuestionType, Task, Unit
 
 SUM_TOLERANCE = 1e-3
-
-
-class AnswerValidationError(ValueError):
-    pass
 
 
 class HardLabelAnswer(BaseModel):

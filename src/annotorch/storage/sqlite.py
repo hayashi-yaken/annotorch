@@ -7,7 +7,6 @@ from pathlib import Path
 
 from ..domain.models import (
     Annotation,
-    ItemsInUseError,
     Annotator,
     Item,
     Modality,
@@ -18,6 +17,7 @@ from ..domain.models import (
     TaskConfig,
     Unit,
 )
+from ..errors import ItemsInUseError, NotFoundError, SchemaVersionError, WorkspaceError
 
 SCHEMA_VERSION = "1"
 
@@ -78,19 +78,23 @@ class SqliteStore:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA foreign_keys = ON")
-        with self.conn:
-            self.conn.executescript(_SCHEMA)
-            self.conn.execute(
-                "INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)",
-                (SCHEMA_VERSION,),
-            )
-        row = self.conn.execute(
-            "SELECT value FROM meta WHERE key = 'schema_version'"
-        ).fetchone()
+        try:
+            self.conn.execute("PRAGMA foreign_keys = ON")
+            with self.conn:
+                self.conn.executescript(_SCHEMA)
+                self.conn.execute(
+                    "INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)",
+                    (SCHEMA_VERSION,),
+                )
+            row = self.conn.execute(
+                "SELECT value FROM meta WHERE key = 'schema_version'"
+            ).fetchone()
+        except sqlite3.DatabaseError as e:
+            self.conn.close()
+            raise WorkspaceError(f"unreadable project database {self.db_path}: {e}") from e
         if row is not None and row["value"] != SCHEMA_VERSION:
             self.conn.close()
-            raise RuntimeError(
+            raise SchemaVersionError(
                 f"unsupported schema_version {row['value']} (expected {SCHEMA_VERSION})"
             )
 
@@ -113,7 +117,7 @@ class SqliteStore:
     def get_project(self) -> Project:
         row = self.conn.execute("SELECT * FROM projects LIMIT 1").fetchone()
         if row is None:
-            raise LookupError(f"no project in {self.db_path}")
+            raise WorkspaceError(f"no project in {self.db_path}")
         return Project(
             id=row["id"],
             name=row["name"],
@@ -162,7 +166,7 @@ class SqliteStore:
         }
         missing = [i for i in item_ids if i not in known]
         if missing:
-            raise LookupError(f"no such items: {', '.join(missing)}")
+            raise NotFoundError(f"no such items: {', '.join(missing)}")
 
         # units.item_ids は JSON テキストで items への外部キーがないため、
         # 参照の有無は自前で確認する。
@@ -180,7 +184,9 @@ class SqliteStore:
             if row["task_name"] not in task_names:
                 task_names.append(row["task_name"])
         if blocked:
-            raise ItemsInUseError([i for i in item_ids if i in blocked], task_names)
+            num_blocked = sum(1 for i in item_ids if i in blocked)
+            raise ItemsInUseError(f"{num_blocked} item(s) are still used by task(s): "
+                                  + ", ".join(task_names))
 
         with self.conn:
             cur = self.conn.execute(
@@ -212,7 +218,7 @@ class SqliteStore:
     def get_task(self, task_id: str) -> Task:
         row = self.conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
         if row is None:
-            raise LookupError(f"no task {task_id}")
+            raise NotFoundError(f"no task {task_id}")
         return self._row_to_task(row)
 
     def list_tasks(self, project_id: str) -> list[Task]:
@@ -225,12 +231,12 @@ class SqliteStore:
         with self.conn:
             cur = self.conn.execute("UPDATE tasks SET name = ? WHERE id = ?", (name, task_id))
         if cur.rowcount == 0:
-            raise LookupError(f"no task {task_id}")
+            raise NotFoundError(f"no task {task_id}")
 
     def delete_task(self, task_id: str) -> None:
         # 外部キーの下から順に消す（annotations -> units -> task）。
         # 1トランザクションなので、途中で失敗すれば何も消えない。
-        self.get_task(task_id)  # 未知の task は LookupError
+        self.get_task(task_id)
         with self.conn:
             self.conn.execute(
                 "DELETE FROM annotations WHERE unit_id IN"

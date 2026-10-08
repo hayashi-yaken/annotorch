@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
+from ..errors import InvalidInputError
 from .base import AnnotorchDataset, read_manifest
 
 
@@ -36,5 +37,5 @@ def load(root: Path | str, split: str = "train",
     elif question == "grouping":
         from .group import GroupingDataset as cls
     else:
-        raise ValueError(f"unsupported question type: {question}")
+        raise InvalidInputError(f"unsupported question type: {question}")
     return cls(root, split=split, transform=transform)

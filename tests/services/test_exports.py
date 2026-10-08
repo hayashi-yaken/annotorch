@@ -4,6 +4,7 @@ import pytest
 from PIL import Image
 
 from annotorch.domain.models import Presentation, QuestionType, TaskConfig
+from annotorch.errors import InvalidInputError, ItemFileMissingError, OutputExistsError
 from annotorch.services.exports import ExportService
 from annotorch.services.projects import ProjectService
 from annotorch.services.tasks import TaskService
@@ -78,7 +79,7 @@ def test_export_refuses_existing_output(env):
     project, task, exports, tmp_path = env
     out = tmp_path / "dataset"
     out.mkdir()
-    with pytest.raises(FileExistsError):
+    with pytest.raises(OutputExistsError):
         exports.export(project.id, task.id, out)
 
 
@@ -89,7 +90,7 @@ def test_export_cleans_tmp_on_failure(env):
     for f in items_dir.iterdir():
         f.unlink()
     out = tmp_path / "dataset"
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ItemFileMissingError):
         exports.export(project.id, task.id, out)
     assert not out.exists()
     assert not list(tmp_path.glob(".*.tmp"))
@@ -97,7 +98,7 @@ def test_export_cleans_tmp_on_failure(env):
 
 def test_invalid_splits_rejected(env):
     project, task, exports, tmp_path = env
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         exports.export(project.id, task.id, tmp_path / "x",
                        splits={"train": 0.5, "test": 0.2})
 
@@ -105,7 +106,7 @@ def test_invalid_splits_rejected(env):
 def test_negative_split_fraction_rejected(env):
     """合計が1になっても、個々の分割が(0, 1]の範囲外なら拒否する。"""
     project, task, exports, tmp_path = env
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         exports.export(project.id, task.id, tmp_path / "x",
                        splits={"train": 1.5, "test": -0.5})
 

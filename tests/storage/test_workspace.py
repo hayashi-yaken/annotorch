@@ -1,5 +1,8 @@
+import logging
+
 import pytest
 
+from annotorch.errors import NotFoundError
 from annotorch.storage.sqlite import SqliteStore
 from annotorch.storage.workspace import Workspace
 
@@ -32,7 +35,7 @@ def test_open_yields_store_and_closes(tmp_path):
 
 def test_open_unknown_project_raises(tmp_path):
     ws = Workspace(tmp_path)
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         with ws.open("nope"):
             pass
 
@@ -42,12 +45,17 @@ def test_delete_project(tmp_path):
     p = ws.create_project("demo")
     ws.delete_project(p.id)
     assert ws.list_projects() == []
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         ws.delete_project(p.id)
 
 
-def test_list_projects_skips_projectless_db(tmp_path):
-    """半端に作られた project.db (プロジェクト行なし) が listing 全体を壊さない。"""
+def skipped_records(caplog):
+    return [r for r in caplog.records
+            if r.name == "annotorch.storage.workspace" and r.levelno == logging.ERROR]
+
+
+def test_list_projects_skips_projectless_db(tmp_path, caplog):
+    """半端に作られた project.db (プロジェクト行なし) が listing 全体を壊さず、ログに残る。"""
     ws = Workspace(tmp_path)
     healthy = ws.create_project("healthy")
 
@@ -58,6 +66,8 @@ def test_list_projects_skips_projectless_db(tmp_path):
 
     projects = ws.list_projects()
     assert [p.id for p in projects] == [healthy.id]
+    [r] = skipped_records(caplog)
+    assert "broken-id" in r.getMessage() and "WorkspaceError" in r.getMessage()
 
 
 def test_create_project_cleans_up_dir_on_failure(tmp_path, monkeypatch):
@@ -81,9 +91,9 @@ def test_delete_project_rejects_traversal(tmp_path):
     sentinel = tmp_path / "sentinel.txt"
     sentinel.write_text("do not delete me")
 
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         ws.delete_project("..")
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         ws.delete_project("../..")
 
     assert sentinel.exists()
@@ -96,15 +106,14 @@ def test_storage_and_items_dir_reject_traversal(tmp_path):
     ws = Workspace(tmp_path)
     ws.create_project("healthy")
 
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         ws.storage("..")
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         ws.items_dir("../..")
 
 
-def test_list_projects_skips_schema_mismatched_db(tmp_path):
-    """schema_version が不一致な project.db (SqliteStore.__init__ が RuntimeError)
-    も、健全なプロジェクトの listing を壊さない。"""
+def test_list_projects_skips_schema_mismatched_db(tmp_path, caplog):
+    """schema_version が不一致な project.db も、健全なプロジェクトの listing を壊さず、ログに残る。"""
     import sqlite3
 
     ws = Workspace(tmp_path)
@@ -124,3 +133,20 @@ def test_list_projects_skips_schema_mismatched_db(tmp_path):
 
     projects = ws.list_projects()
     assert [p.id for p in projects] == [healthy.id]
+    [r] = skipped_records(caplog)
+    assert "bad-schema-id" in r.getMessage() and "SchemaVersionError" in r.getMessage()
+
+
+def test_list_projects_skips_unreadable_db(tmp_path, caplog):
+    """SQLite として読めない project.db も、健全なプロジェクトの listing を壊さず、ログに残る。"""
+    ws = Workspace(tmp_path)
+    healthy = ws.create_project("healthy")
+
+    bad_dir = tmp_path / "projects" / "garbage-id"
+    bad_dir.mkdir(parents=True)
+    (bad_dir / "project.db").write_bytes(b"this is not a sqlite database" * 100)
+
+    projects = ws.list_projects()
+    assert [p.id for p in projects] == [healthy.id]
+    [r] = skipped_records(caplog)
+    assert "garbage-id" in r.getMessage() and "WorkspaceError" in r.getMessage()

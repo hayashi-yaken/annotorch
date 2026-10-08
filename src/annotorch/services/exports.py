@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from .. import __version__
 from ..domain.answers import is_skipped
 from ..domain.models import QuestionType
+from ..errors import InvalidInputError, ItemFileMissingError, OutputExistsError
 from ..storage.repository import ProjectStore
 from ..storage.workspace import Workspace
 
@@ -34,15 +35,15 @@ class ExportService:
                splits: dict[str, float] | None = None, seed: int = 0) -> ExportResult:
         if splits is not None:
             if not splits:
-                raise ValueError("splits must not be empty")
+                raise InvalidInputError("splits must not be empty")
             for name, fraction in splits.items():
                 if not (0 < fraction <= 1):
-                    raise ValueError(
+                    raise InvalidInputError(
                         f"split fraction for {name!r} must be in (0, 1] (got {fraction})"
                     )
             total = sum(splits.values())
             if abs(total - 1.0) > 1e-3:
-                raise ValueError(f"split fractions must sum to 1 (got {total})")
+                raise InvalidInputError(f"split fractions must sum to 1 (got {total})")
         with self.ws.open(project_id) as store:
             return _export(store, task_id, self.ws.items_dir(project_id),
                            Path(output_dir), splits, seed)
@@ -98,7 +99,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
     all_items = {i.id: i for i in store.list_items(task.project_id)}
 
     if output_dir.exists():
-        raise FileExistsError(f"output already exists: {output_dir}")
+        raise OutputExistsError(f"output already exists: {output_dir}")
     tmp = output_dir.parent / f".{output_dir.name}.tmp"
     if tmp.exists():
         shutil.rmtree(tmp)
@@ -114,7 +115,7 @@ def _export(store: ProjectStore, task_id: str, items_dir: Path,
                 if item.path is not None:
                     src = items_dir / item.path
                     if not src.exists():
-                        raise FileNotFoundError(f"item file missing: {src}")
+                        raise ItemFileMissingError(f"item file missing: {src}")
                     shutil.copy2(src, tmp / "items" / item.path)
                     record = {"id": item.id, "modality": item.modality.value,
                               "file": f"items/{item.path}", "metadata": item.metadata}

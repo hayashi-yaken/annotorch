@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import logging
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
 from ..domain.models import Project
+from ..errors import NotFoundError, WorkspaceError
 from .repository import ProjectStore
 from .sqlite import SqliteStore
+
+logger = logging.getLogger(__name__)
 
 
 class Workspace:
@@ -18,12 +22,12 @@ class Workspace:
 
     def _project_dir(self, project_id: str) -> Path:
         # project_id は URL パス segment 由来で信頼できない。".." などで
-        # projects/ の外に出ようとした場合は 404 相当の LookupError にする
+        # projects/ の外に出ようとした場合は NotFoundError にする
         # (任意ディレクトリ削除などのパストラバーサル対策)。
         base = (self.root / "projects").resolve()
         d = (base / project_id).resolve()
         if d.parent != base:
-            raise LookupError(f"no project {project_id}")
+            raise NotFoundError(f"no project {project_id}")
         return d
 
     def create_project(self, name: str, description: str = "") -> Project:
@@ -48,29 +52,27 @@ class Workspace:
             return []
         out: list[Project] = []
         for db in sorted(projects_dir.glob("*/project.db")):
+            # 開けない project.db があっても、他のプロジェクトは一覧に出す。
             try:
                 store = SqliteStore(db)
-            except (LookupError, RuntimeError):
-                # schema_version 不一致など、開けない project.db は listing から除外する。
-                continue
-            try:
-                out.append(store.get_project())
-            except LookupError:
-                continue
-            finally:
-                store.close()
+                try:
+                    out.append(store.get_project())
+                finally:
+                    store.close()
+            except WorkspaceError as e:
+                logger.error("skipping project %s: %s: %s", db.parent, type(e).__name__, e)
         return out
 
     def delete_project(self, project_id: str) -> None:
         d = self._project_dir(project_id)
         if not d.is_dir():
-            raise LookupError(f"no project {project_id} under {self.root}")
+            raise NotFoundError(f"no project {project_id} under {self.root}")
         shutil.rmtree(d)
 
     def storage(self, project_id: str) -> SqliteStore:
         db = self._project_dir(project_id) / "project.db"
         if not db.exists():
-            raise LookupError(f"no project {project_id} under {self.root}")
+            raise NotFoundError(f"no project {project_id} under {self.root}")
         return SqliteStore(db)
 
     @contextmanager

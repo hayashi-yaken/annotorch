@@ -14,6 +14,7 @@ from ..domain.models import (
     TaskConfig,
 )
 from ..domain.units import generate_units
+from ..errors import InvalidInputError, NotFoundError
 from ..storage.workspace import Workspace
 
 
@@ -41,10 +42,10 @@ class TaskService:
             task = Task(project_id=project_id, name=name, presentation=presentation,
                         question=question, config=config)
         except ValidationError as e:
-            raise ValueError(str(e)) from e
+            raise InvalidInputError(str(e)) from e
         with self.ws.open(project_id) as store:
             item_ids = [i.id for i in store.list_items(project_id)]
-            units = generate_units(task, item_ids)  # 設定不正は ValueError
+            units = generate_units(task, item_ids)
             store.add_task(task)
             store.add_units(units)
         return task, len(units)
@@ -65,7 +66,7 @@ class TaskService:
     def rename_task(self, project_id: str, task_id: str, name: str) -> Task:
         name = name.strip()
         if not name:
-            raise ValueError("task name must not be empty")
+            raise InvalidInputError("task name must not be empty")
         with self.ws.open(project_id) as store:
             store.rename_task(task_id, name)
             return store.get_task(task_id)
@@ -76,7 +77,7 @@ class TaskService:
 
     def list_units(self, project_id: str, task_id: str) -> list[UnitDetail]:
         with self.ws.open(project_id) as store:
-            store.get_task(task_id)  # 未知の task は LookupError
+            store.get_task(task_id)
             items = {i.id: i for i in store.list_items(project_id)}
             answers = {a.unit_id: a.answer
                        for a in store.list_annotations_for_task(task_id)}
@@ -93,7 +94,7 @@ class TaskService:
             task = store.get_task(task_id)
             unit = next((u for u in store.list_units(task_id) if u.id == unit_id), None)
             if unit is None:
-                raise LookupError(f"no unit {unit_id}")
+                raise NotFoundError(f"no unit {unit_id}")
             validated = validate_answer(task, unit, answer)
             annotator = store.get_default_annotator()
             store.save_annotation(Annotation(unit_id=unit_id,

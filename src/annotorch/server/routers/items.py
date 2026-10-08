@@ -3,9 +3,10 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, UploadFile
 from fastapi.responses import FileResponse
 
+from ...errors import InvalidInputError
 from ...services.projects import ProjectService
 from ..schemas import FolderImport, ItemsDelete
 from .deps import project_service
@@ -39,7 +40,7 @@ async def upload_texts(pid: str, file: UploadFile,
                        svc: ProjectService = Depends(project_service)):
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in {".jsonl", ".csv"}:
-        raise HTTPException(400, f"expected .jsonl or .csv (got {suffix!r})")
+        raise InvalidInputError(f"expected .jsonl or .csv (got {suffix!r})")
     with tempfile.TemporaryDirectory() as tmp:
         p = Path(tmp) / f"upload{suffix}"
         p.write_bytes(await file.read())
@@ -53,7 +54,7 @@ def import_folder(pid: str, body: FolderImport,
                   svc: ProjectService = Depends(project_service)):
     src = Path(body.path)
     if not src.is_dir():
-        raise HTTPException(400, f"not a directory: {body.path}")
+        raise InvalidInputError(f"not a directory: {body.path}")
     return svc.import_images(pid, src)
 
 

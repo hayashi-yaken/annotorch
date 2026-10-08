@@ -2,7 +2,6 @@ import pytest
 
 from annotorch.domain.models import (
     Annotation,
-    ItemsInUseError,
     Item,
     Modality,
     Presentation,
@@ -11,6 +10,12 @@ from annotorch.domain.models import (
     Task,
     TaskConfig,
     Unit,
+)
+from annotorch.errors import (
+    ItemsInUseError,
+    NotFoundError,
+    SchemaVersionError,
+    WorkspaceError,
 )
 from annotorch.storage.repository import ProjectStore
 from annotorch.storage.sqlite import SqliteStore
@@ -50,9 +55,15 @@ def test_project_roundtrip_across_reopen(db_path):
     st2.close()
 
 
+def test_open_unreadable_file_raises_workspace_error(db_path):
+    db_path.write_bytes(b"this is not a sqlite database" * 100)
+    with pytest.raises(WorkspaceError, match="unreadable project database"):
+        SqliteStore(db_path)
+
+
 def test_get_project_empty_raises(db_path):
     st = SqliteStore(db_path)
-    with pytest.raises(LookupError):
+    with pytest.raises(WorkspaceError):
         st.get_project()
 
 
@@ -124,7 +135,7 @@ def test_open_rejects_mismatched_schema_version(db_path):
     st.conn.commit()
     st.close()
 
-    with pytest.raises(RuntimeError, match="schema_version"):
+    with pytest.raises(SchemaVersionError, match="schema_version"):
         SqliteStore(db_path)
 
 
@@ -148,7 +159,7 @@ def test_delete_items_rejects_unknown_id_without_deleting_anything(db_path):
     item = Item(project_id=project.id, modality=Modality.IMAGE, path="a.png")
     st.add_items([item])
 
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFoundError):
         st.delete_items([item.id, "nope"])
 
     assert [i.id for i in st.list_items(project.id)] == [item.id]
@@ -168,8 +179,7 @@ def test_delete_items_rejects_items_used_by_a_task(db_path):
     with pytest.raises(ItemsInUseError) as excinfo:
         st.delete_items([items[0].id, items[1].id])
 
-    assert excinfo.value.item_ids == [items[0].id]
-    assert task.name in str(excinfo.value)
+    assert str(excinfo.value) == f"1 item(s) are still used by task(s): {task.name}"
     assert len(st.list_items(project.id)) == 2
 
 

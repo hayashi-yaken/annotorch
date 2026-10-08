@@ -1,20 +1,14 @@
-import { Box, Image, Text } from "@chakra-ui/react";
-import { api } from "../api";
+import { Box, Text } from "@chakra-ui/react";
 import type { Item } from "../api";
+import ItemImage from "./ItemImage";
 
 export default function ItemView({ projectId, item, size }: {
   projectId: string; item: Item; size?: "large";
 }) {
   if (item.modality === "image") {
     return (
-      <Image
-        src={api.itemFileUrl(projectId, item.id)}
-        alt={item.id}
-        w="full"
-        h={size === "large" ? "260px" : "100px"}
-        objectFit="contain"
-        bg="gray.100"
-      />
+      <ItemImage projectId={projectId} itemId={item.id}
+                 h={size === "large" ? "260px" : "100px"} />
     );
   }
   return (

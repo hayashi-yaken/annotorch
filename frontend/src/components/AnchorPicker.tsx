@@ -1,6 +1,6 @@
-import { Box, Image, SimpleGrid, Stack, Text } from "@chakra-ui/react";
-import { api } from "../api";
+import { Box, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import type { Item } from "../api";
+import ItemImage from "./ItemImage";
 
 export default function AnchorPicker({ projectId, items, selected, onChange }: {
   projectId: string;
@@ -32,14 +32,7 @@ export default function AnchorPicker({ projectId, items, selected, onChange }: {
               overflow="hidden"
             >
               {item.modality === "image" ? (
-                <Image
-                  src={api.itemFileUrl(projectId, item.id)}
-                  alt={item.id}
-                  w="full"
-                  h="72px"
-                  objectFit="contain"
-                  bg="gray.100"
-                />
+                <ItemImage projectId={projectId} itemId={item.id} h="72px" />
               ) : (
                 <Text fontSize="xs" p={2} lineClamp={3}>{item.text}</Text>
               )}

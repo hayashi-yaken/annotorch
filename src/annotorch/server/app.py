@@ -17,9 +17,17 @@ from .routers import annotations, export, items, projects, tasks
 STATIC_DIR = Path(__file__).parent / "static"
 
 
-def create_app(root: Path | str) -> FastAPI:
+def create_app(root: Path | str, import_root: Path | str | None = None,
+               export_root: Path | str | None = None) -> FastAPI:
+    """API と UI を配信するアプリを作る。
+
+    フォルダ取り込みは import_root（既定はホームディレクトリ）の内側だけを読み、
+    エクスポートは export_root（既定は root/exports）の直下にだけ書く。
+    """
     app = FastAPI(title="annotorch")
     ws = Workspace(root)
+    app.state.import_root = Path(import_root) if import_root else Path.home()
+    app.state.export_root = Path(export_root) if export_root else Path(root) / "exports"
     app.state.projects = ProjectService(ws)
     app.state.tasks = TaskService(ws)
     app.state.exports = ExportService(ws)

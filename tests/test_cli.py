@@ -68,7 +68,7 @@ def _run_serve(monkeypatch, tmp_path, *extra):
     import uvicorn
 
     captured = {}
-    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: captured.update(kw))
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: captured.update(kw, app=app))
     code = main(["serve", "--root", str(tmp_path / "root"), "--no-browser", *extra])
     assert code == 0
     return captured
@@ -107,3 +107,18 @@ def test_serve_rejects_unknown_log_level_env(tmp_path, monkeypatch, capsys):
         main(["serve", "--root", str(tmp_path / "root"), "--no-browser"])
     assert excinfo.value.code == 2
     assert "ANNOTORCH_LOG_LEVEL" in capsys.readouterr().err
+
+
+def test_serve_import_and_export_roots_default(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    state = _run_serve(monkeypatch, tmp_path)["app"].state
+    assert state.import_root == Path.home()
+    assert state.export_root == tmp_path / "root" / "exports"
+
+
+def test_serve_import_and_export_roots_from_flags(tmp_path, monkeypatch):
+    state = _run_serve(monkeypatch, tmp_path,
+                       "--import-root", str(tmp_path / "in"),
+                       "--export-root", str(tmp_path / "out"))["app"].state
+    assert (state.import_root, state.export_root) == (tmp_path / "in", tmp_path / "out")

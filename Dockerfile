@@ -20,4 +20,5 @@ COPY --from=frontend /app/src/annotorch/server/static ./src/annotorch/server/sta
 RUN --mount=type=cache,target=/root/.cache/pip pip install --no-deps .
 
 EXPOSE 8000
-CMD ["annotorch", "serve", "--root", "/data", "--host", "0.0.0.0", "--port", "8000", "--no-browser"]
+CMD ["annotorch", "serve", "--root", "/data", "--host", "0.0.0.0", "--port", "8000", "--no-browser", \
+     "--import-root", "/import", "--export-root", "/export"]

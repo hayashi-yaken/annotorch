@@ -8,8 +8,9 @@ from fastapi.responses import FileResponse
 
 from ...errors import InvalidInputError
 from ...services.projects import ProjectService
+from ..paths import resolve_within
 from ..schemas import FolderImport, ItemsDelete
-from .deps import project_service
+from .deps import import_root, project_service
 
 router = APIRouter()
 
@@ -51,8 +52,9 @@ async def upload_texts(pid: str, file: UploadFile,
 
 @router.post("/projects/{pid}/items/import-folder")
 def import_folder(pid: str, body: FolderImport,
+                  root: Path = Depends(import_root),
                   svc: ProjectService = Depends(project_service)):
-    src = Path(body.path)
+    src = resolve_within(root, body.path)
     if not src.is_dir():
         raise InvalidInputError(f"not a directory: {body.path}")
     return svc.import_images(pid, src)

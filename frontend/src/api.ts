@@ -34,6 +34,9 @@ export interface UnitView {
 export interface ImportReport {
   imported: number; skipped: { source: string; reason: string }[];
 }
+export interface ExportRequest {
+  name: string; splits: Record<string, number> | null; seed: number;
+}
 export interface ExportResult {
   output_dir: string; num_rows: number; num_unanswered_units: number;
   num_skipped: number; split_counts: Record<string, number>;
@@ -41,13 +44,17 @@ export interface ExportResult {
 
 const BASE = "/api";
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
+async function send(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(BASE + path, init);
   if (!res.ok) {
     const detail = (await res.json().catch(() => null))?.detail;
     throw new Error(typeof detail === "string" ? detail : res.statusText);
   }
-  return res.json();
+  return res;
+}
+
+async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  return (await send(path, init)).json();
 }
 
 const json = (method: string, body: unknown): RequestInit => ({
@@ -105,8 +112,8 @@ export const api = {
       `/projects/${pid}/tasks/${tid}/units/${uid}/annotation`,
       json("PUT", { answer })),
 
-  exportTask: (pid: string, tid: string, body: {
-    output_dir: string; splits: Record<string, number> | null; seed: number;
-  }) => req<ExportResult>(`/projects/${pid}/tasks/${tid}/export`,
-    json("POST", body)),
+  exportTask: (pid: string, tid: string, body: ExportRequest) =>
+    req<ExportResult>(`/projects/${pid}/tasks/${tid}/export`, json("POST", body)),
+  downloadExport: async (pid: string, tid: string, body: ExportRequest) =>
+    (await send(`/projects/${pid}/tasks/${tid}/export/zip`, json("POST", body))).blob(),
 };

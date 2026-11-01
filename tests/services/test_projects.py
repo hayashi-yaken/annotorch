@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -98,6 +99,28 @@ def test_item_file_path_raises_when_file_is_gone(svc, tmp_path):
     path.unlink()
     with pytest.raises(ItemFileMissingError, match=item.id):
         svc.item_file_path(project.id, item.id)
+
+
+def test_import_images_skips_symlinks_leading_outside_the_folder(svc, tmp_path):
+    project = svc.create("demo")
+    outside = tmp_path / "outside"
+    (outside / "dir").mkdir(parents=True)
+    make_png(outside / "secret.png")
+    make_png(outside / "dir" / "deep.png")
+    src = tmp_path / "src"
+    (src / "sub").mkdir(parents=True)
+    make_png(src / "a.png")
+    (src / "link.png").symlink_to(outside / "secret.png")
+    (src / "linkdir").symlink_to(outside / "dir")
+    (src / "sub" / "alias.png").symlink_to(src / "a.png")
+
+    report = svc.import_images(project.id, src)
+
+    assert report.imported == 2
+    reasons = {Path(s.source).name: s.reason for s in report.skipped}
+    assert "outside" in reasons["link.png"]
+    assert "deep.png" not in {Path(i.metadata["source"]).name
+                              for i in svc.list_items(project.id)}
 
 
 def test_import_images_empty_dir_does_not_crash(svc, tmp_path):

@@ -13,8 +13,9 @@ docker compose up --build
 
 作業データは volume `annotorch-data` に永続化される。
 フォルダ取り込みを使う場合はホストの `./import` に画像を置き、
-UI で `/import` を指定する。
-エクスポート先に `/export` 配下を指定すると、ホストの `./export` に出力される。
+UI では `./import` からの相対パス（例: `swan`）を指定する。`./import` の外は読めない。
+エクスポートは、UI で指定したデータセット名のフォルダとしてホストの `./export` に出力される。
+「ZIP でダウンロード」を使うと、ブラウザから手元の好きな場所に保存できる。
 
 ## 起動（Docker なし・開発用）
 
@@ -23,6 +24,9 @@ uv sync --extra server
 cd frontend && npm install && npm run build && cd ..
 uv run annotorch serve
 ```
+
+フォルダ取り込みはホームディレクトリの内側だけ、エクスポートは `~/.annotorch/exports` の下だけに限られる。
+変えるときは `--import-root` / `--export-root` を指定する。CLI の `annotorch export --out` はどこにでも書き出せる。
 
 ## 作ったデータセットを使う
 

@@ -36,6 +36,23 @@ export default function ExportPanel({ projectId, task, onClose }: {
     }
   });
 
+  const downloadZip = useAsync(async () => {
+    try {
+      const body = request();
+      const blob = await api.downloadExport(projectId, task.id, body);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${body.name}.zip`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch (e) {
+      toaster.error({ title: "ZIP の作成に失敗しました", description: message(e) });
+    }
+  });
+
+  const busy = createDataset.pending || downloadZip.pending;
+
   return (
     <Card.Root>
       <Card.Body>
@@ -73,11 +90,20 @@ export default function ExportPanel({ projectId, task, onClose }: {
               onClick={() => createDataset.run()}
               loading={createDataset.pending}
               loadingText="作成中…"
-              disabled={!name.trim()}
+              disabled={!name.trim() || busy}
             >
               エクスポート先に保存
             </Button>
-            <Button variant="outline" disabled={createDataset.pending} onClick={onClose}>閉じる</Button>
+            <Button
+              variant="outline"
+              onClick={() => downloadZip.run()}
+              loading={downloadZip.pending}
+              loadingText="作成中…"
+              disabled={!name.trim() || busy}
+            >
+              ZIP でダウンロード
+            </Button>
+            <Button variant="outline" disabled={busy} onClick={onClose}>閉じる</Button>
           </HStack>
 
           {result && (

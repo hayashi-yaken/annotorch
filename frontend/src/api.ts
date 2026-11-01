@@ -44,13 +44,17 @@ export interface ExportResult {
 
 const BASE = "/api";
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
+async function send(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(BASE + path, init);
   if (!res.ok) {
     const detail = (await res.json().catch(() => null))?.detail;
     throw new Error(typeof detail === "string" ? detail : res.statusText);
   }
-  return res.json();
+  return res;
+}
+
+async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  return (await send(path, init)).json();
 }
 
 const json = (method: string, body: unknown): RequestInit => ({
@@ -110,4 +114,6 @@ export const api = {
 
   exportTask: (pid: string, tid: string, body: ExportRequest) =>
     req<ExportResult>(`/projects/${pid}/tasks/${tid}/export`, json("POST", body)),
+  downloadExport: async (pid: string, tid: string, body: ExportRequest) =>
+    (await send(`/projects/${pid}/tasks/${tid}/export/zip`, json("POST", body))).blob(),
 };

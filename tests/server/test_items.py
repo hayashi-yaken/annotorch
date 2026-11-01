@@ -53,24 +53,51 @@ def test_upload_texts_wrong_extension_400(client):
     assert res.status_code == 400
 
 
-def test_import_folder(client, tmp_path):
+def test_import_folder_relative_to_import_root(client, tmp_path):
     from PIL import Image
 
     pid = create_project(client)
-    src = tmp_path / "folder"
-    src.mkdir()
+    src = tmp_path / "import" / "folder"
+    src.mkdir(parents=True)
     Image.new("RGB", (8, 8)).save(src / "x.png")
     res = client.post(f"/api/projects/{pid}/items/import-folder",
-                      json={"path": str(src)})
+                      json={"path": "folder"})
     assert res.status_code == 200
     assert res.json()["imported"] == 1
 
 
-def test_import_folder_bad_path_400(client):
+def test_import_folder_accepts_absolute_path_inside_import_root(client, tmp_path):
+    from PIL import Image
+
+    pid = create_project(client)
+    src = tmp_path / "import" / "folder"
+    src.mkdir(parents=True)
+    Image.new("RGB", (8, 8)).save(src / "x.png")
+    res = client.post(f"/api/projects/{pid}/items/import-folder",
+                      json={"path": str(src)})
+    assert res.status_code == 200
+
+
+def test_import_folder_missing_dir_400(client):
     pid = create_project(client)
     res = client.post(f"/api/projects/{pid}/items/import-folder",
-                      json={"path": "/no/such/dir"})
+                      json={"path": "no-such-dir"})
     assert res.status_code == 400
+
+
+def test_import_folder_outside_import_root_400(client, tmp_path):
+    from PIL import Image
+
+    pid = create_project(client)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    Image.new("RGB", (8, 8)).save(outside / "x.png")
+    for path in [str(outside), "../outside"]:
+        res = client.post(f"/api/projects/{pid}/items/import-folder",
+                          json={"path": path})
+        assert res.status_code == 400
+        assert "must be inside" in res.json()["detail"]
+    assert client.get(f"/api/projects/{pid}/items").json() == []
 
 
 def test_delete_items(client):

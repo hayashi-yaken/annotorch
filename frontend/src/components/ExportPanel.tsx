@@ -4,6 +4,7 @@ import {
 } from "@chakra-ui/react";
 import { api } from "../api";
 import type { ExportResult, Task } from "../api";
+import { defaultDatasetName } from "../lib/datasetName";
 import { message } from "../lib/errors";
 import { parseSplits } from "../lib/splits";
 import { toaster } from "../lib/toaster";
@@ -12,17 +13,20 @@ import { useAsync } from "../lib/useAsync";
 export default function ExportPanel({ projectId, task, onClose }: {
   projectId: string; task: Task; onClose: () => void;
 }) {
-  const [outputDir, setOutputDir] = useState("");
+  const [name, setName] = useState(() => defaultDatasetName(task.name, new Date()));
   const [splits, setSplits] = useState("");
   const [seed, setSeed] = useState(0);
   const [result, setResult] = useState<ExportResult | null>(null);
 
+  const request = () => ({
+    name: name.trim(), splits: splits.trim() ? parseSplits(splits) : null, seed,
+  });
+
   const createDataset = useAsync(async () => {
     try {
-      const parsed = splits.trim() ? parseSplits(splits) : null;
-      const exported = await api.exportTask(projectId, task.id,
-        { output_dir: outputDir.trim(), splits: parsed, seed });
+      const exported = await api.exportTask(projectId, task.id, request());
       setResult(exported);
+      setName(defaultDatasetName(task.name, new Date()));
       toaster.success({
         title: `${exported.num_rows} 件をエクスポートしました`,
         description: exported.output_dir,
@@ -40,11 +44,11 @@ export default function ExportPanel({ projectId, task, onClose }: {
 
           <HStack wrap="wrap" gap={4} align="flex-end">
             <Field.Root width="20rem">
-              <Field.Label>出力先ディレクトリ</Field.Label>
+              <Field.Label>データセット名</Field.Label>
               <Input
-                value={outputDir}
-                onChange={(e) => setOutputDir(e.target.value)}
-                placeholder="出力先ディレクトリ（Docker では /export 配下のパス）"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="フォルダ名（/ を含めない）"
               />
             </Field.Root>
             <Field.Root width="16rem">
@@ -69,9 +73,9 @@ export default function ExportPanel({ projectId, task, onClose }: {
               onClick={() => createDataset.run()}
               loading={createDataset.pending}
               loadingText="作成中…"
-              disabled={!outputDir.trim()}
+              disabled={!name.trim()}
             >
-              データセット作成
+              エクスポート先に保存
             </Button>
             <Button variant="outline" disabled={createDataset.pending} onClick={onClose}>閉じる</Button>
           </HStack>

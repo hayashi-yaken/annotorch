@@ -118,7 +118,7 @@ export default function ImportPanel({ projectId, onImported }: {
               <Input
                 value={folder}
                 onChange={(e) => setFolder(e.target.value)}
-                placeholder="Docker では /import 配下のパス"
+                placeholder="取り込み用フォルダ内のパス（Docker ではホストの ./import が起点）"
               />
               <Button
                 loading={importing === "フォルダ"}

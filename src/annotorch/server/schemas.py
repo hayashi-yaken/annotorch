@@ -36,6 +36,6 @@ class AnnotationIn(BaseModel):
 
 
 class ExportIn(BaseModel):
-    output_dir: str
+    name: str
     splits: dict[str, float] | None = None
     seed: int = 0

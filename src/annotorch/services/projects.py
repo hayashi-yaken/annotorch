@@ -77,7 +77,13 @@ class ProjectService:
         report = ImportReport()
         items: list[Item] = []
         items_dir = self.ws.items_dir(project_id)
+        base = Path(source_dir).resolve()
         for path in sorted(p for p in Path(source_dir).rglob("*") if p.is_file()):
+            if not path.resolve().is_relative_to(base):
+                report.skipped.append(
+                    SkippedFile(source=str(path), reason="links outside the import folder")
+                )
+                continue
             ext = path.suffix.lower()
             if ext not in IMAGE_EXTENSIONS:
                 report.skipped.append(

@@ -1,3 +1,5 @@
+import pytest
+
 from .conftest import create_project, upload_pngs
 
 
@@ -16,38 +18,38 @@ def annotate_all(client, pid, task_id, labels=("cat", "dog")):
             json={"answer": {"label": labels[n % len(labels)]}})
 
 
-def test_export(client, tmp_path):
+@pytest.fixture
+def annotated(client):
     pid = create_project(client)
     upload_pngs(client, pid, 4)
     task = make_task(client, pid)
     annotate_all(client, pid, task["id"])
+    return f"/api/projects/{pid}/tasks/{task['id']}/export"
 
-    out = tmp_path / "ds"
-    res = client.post(f"/api/projects/{pid}/tasks/{task['id']}/export",
-                      json={"output_dir": str(out)})
+
+def test_export_writes_under_export_root(client, tmp_path, annotated):
+    res = client.post(annotated, json={"name": "ds"})
     assert res.status_code == 200
     assert res.json()["num_rows"] == 4
+    out = tmp_path / "export" / "ds"
+    assert res.json()["output_dir"] == str(out.resolve())
     assert (out / "manifest.json").exists()
 
 
-def test_export_existing_dir_409(client, tmp_path):
-    pid = create_project(client)
-    upload_pngs(client, pid, 1)
-    task = make_task(client, pid)
-    annotate_all(client, pid, task["id"])
-    out = tmp_path / "ds"
-    out.mkdir()
-    res = client.post(f"/api/projects/{pid}/tasks/{task['id']}/export",
-                      json={"output_dir": str(out)})
+def test_export_existing_name_409(client, tmp_path, annotated):
+    (tmp_path / "export" / "ds").mkdir(parents=True)
+    res = client.post(annotated, json={"name": "ds"})
     assert res.status_code == 409
 
 
-def test_export_invalid_splits_400(client, tmp_path):
-    pid = create_project(client)
-    upload_pngs(client, pid, 1)
-    task = make_task(client, pid)
-    annotate_all(client, pid, task["id"])
-    res = client.post(f"/api/projects/{pid}/tasks/{task['id']}/export",
-                      json={"output_dir": str(tmp_path / "x"),
-                            "splits": {"train": 0.5, "test": 0.2}})
+@pytest.mark.parametrize("name", ["../escape", "/tmp/x", "a/b", ".hidden", " "])
+def test_export_rejects_names_that_are_paths_400(client, tmp_path, annotated, name):
+    res = client.post(annotated, json={"name": name})
+    assert res.status_code == 400
+    assert not (tmp_path / "escape").exists()
+
+
+def test_export_invalid_splits_400(client, annotated):
+    res = client.post(annotated, json={"name": "x",
+                                       "splits": {"train": 0.5, "test": 0.2}})
     assert res.status_code == 400

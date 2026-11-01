@@ -34,6 +34,9 @@ export interface UnitView {
 export interface ImportReport {
   imported: number; skipped: { source: string; reason: string }[];
 }
+export interface ExportRequest {
+  name: string; splits: Record<string, number> | null; seed: number;
+}
 export interface ExportResult {
   output_dir: string; num_rows: number; num_unanswered_units: number;
   num_skipped: number; split_counts: Record<string, number>;
@@ -105,8 +108,6 @@ export const api = {
       `/projects/${pid}/tasks/${tid}/units/${uid}/annotation`,
       json("PUT", { answer })),
 
-  exportTask: (pid: string, tid: string, body: {
-    output_dir: string; splits: Record<string, number> | null; seed: number;
-  }) => req<ExportResult>(`/projects/${pid}/tasks/${tid}/export`,
-    json("POST", body)),
+  exportTask: (pid: string, tid: string, body: ExportRequest) =>
+    req<ExportResult>(`/projects/${pid}/tasks/${tid}/export`, json("POST", body)),
 };

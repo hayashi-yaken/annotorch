@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import Request
 
 from ...services.exports import ExportService
@@ -17,3 +19,11 @@ def task_service(request: Request) -> TaskService:
 
 def export_service(request: Request) -> ExportService:
     return request.app.state.exports
+
+
+def import_root(request: Request) -> Path:
+    return request.app.state.import_root
+
+
+def export_root(request: Request) -> Path:
+    return request.app.state.export_root

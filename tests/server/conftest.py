@@ -9,7 +9,8 @@ from annotorch.server.app import create_app
 
 @pytest.fixture
 def client(tmp_path):
-    app = create_app(tmp_path / "root")
+    app = create_app(tmp_path / "root", import_root=tmp_path / "import",
+                     export_root=tmp_path / "export")
     with TestClient(app) as c:
         yield c
 

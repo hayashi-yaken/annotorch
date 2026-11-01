@@ -24,9 +24,9 @@ def test_api_roundtrip_hard_label(client, tmp_path):
             json={"answer": {"label": "cat" if n % 2 == 0 else "dog"}})
         assert res.status_code == 200
 
-    out = tmp_path / "exported"
+    out = tmp_path / "export" / "exported"
     res = client.post(f"/api/projects/{pid}/tasks/{task['id']}/export",
-                      json={"output_dir": str(out)})
+                      json={"name": "exported"})
     assert res.status_code == 200
     assert res.json()["num_rows"] == 4
 
@@ -52,9 +52,9 @@ def test_api_roundtrip_preference_with_skip(client, tmp_path):
             json={"answer": answer})
         assert res.status_code == 200
 
-    out = tmp_path / "exported-pref"
+    out = tmp_path / "export" / "exported-pref"
     body = client.post(f"/api/projects/{pid}/tasks/{task['id']}/export",
-                       json={"output_dir": str(out)}).json()
+                       json={"name": "exported-pref"}).json()
     assert body["num_rows"] == 2
     assert body["num_skipped"] == 1
 

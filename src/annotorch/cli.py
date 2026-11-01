@@ -65,7 +65,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    app = create_app(args.root)
+    app = create_app(args.root, import_root=args.import_root, export_root=args.export_root)
     if not args.no_browser:
         import threading
         import webbrowser
@@ -100,6 +100,12 @@ def main(argv: list[str] | None = None) -> int:
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8000)
     p_serve.add_argument("--no-browser", action="store_true")
+    p_serve.add_argument("--import-root", type=Path, default=None,
+                         help="folder imports are limited to this directory"
+                              " (default: home directory)")
+    p_serve.add_argument("--export-root", type=Path, default=None,
+                         help="exports are written under this directory"
+                              " (default: <root>/exports)")
     p_serve.add_argument("--log-level", type=str.lower, choices=LOG_LEVELS,
                          help="default: $ANNOTORCH_LOG_LEVEL, otherwise info")
     p_serve.set_defaults(func=_cmd_serve)
